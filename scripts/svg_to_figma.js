@@ -131,8 +131,9 @@ async function main() {
 
   // Pre-built shapes
   if (pathStr === '--heart') {
-    // Accurate heart SVG (taken from standard SVG icon sets)
-    pathStr = "M 50,15 C 25,0 0,20 0,40 C 0,65 30,85 50,100 C 70,85 100,65 100,40 C 100,20 75,0 50,15 Z";
+    // Refined heart SVG with better tangent matching
+    // Two cubic beziers per lobe for smoother curves
+    pathStr = "M 50,18 C 35,0 0,15 0,42 C 0,65 25,82 50,98 C 75,82 100,65 100,42 C 100,15 65,0 50,18 Z";
   }
   if (pathStr === '--star5') {
     pathStr = "M 50,0 L 61,35 L 100,35 L 68,57 L 79,95 L 50,73 L 21,95 L 32,57 L 0,35 L 39,35 Z";
@@ -169,16 +170,10 @@ async function main() {
 
   console.log("  BBox: " + Math.round(bw*scale) + "x" + Math.round(bh*scale) + " at (" + Math.round(offsetX) + "," + Math.round(offsetY) + ")");
 
-  // Send to Figma
-  var result = await sendCommand("createVector", {
-    name: "SVG Shape",
-    x: offsetX,
-    y: offsetY,
-    fills: [{ type: "SOLID", color: { r: 0.9, g: 0.1, b: 0.1 }, opacity: 1 }],
-    strokes: [],
-    vertices: shape.vertices,
-    segments: shape.segments,
-    closed: true
+  // Send to Figma using native SVG import (much more accurate)
+  console.log("\nSending SVG to Figma...");
+  var result = await sendCommand("importSvg", {
+    svg: '<svg xmlns="http://www.w3.org/2000/svg" width="' + Math.round(bw*scale) + '" height="' + Math.round(bh*scale) + '" viewBox="0 0 ' + Math.round(bw) + ' ' + Math.round(bh) + '"><path d="' + pathStr + '" fill="red"/></svg>'
   });
 
   if (result && result.status === 'ok' && result.data && result.data.id) {

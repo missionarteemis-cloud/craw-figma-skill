@@ -498,6 +498,48 @@ commands.moveNodes = function(p) {
   return result;
 };
 
+// ── SVG IMPORT ──
+// Uses Figma's native SVG parser for perfect vector shapes
+
+commands.importSvg = function(p) {
+  if (!p.svg) throw new Error("Missing 'svg' parameter");
+  
+  var node;
+  try {
+    node = figma.createNodeFromSvgAsync(p.svg);
+  } catch(e) {
+    throw new Error("SVG parse error: " + e.message);
+  }
+  
+  // nodeFromSvgAsync returns a promise, we handle it here
+  return node.then(function(nodes) {
+    var mainNode = null;
+    var nodeIds = [];
+    
+    for (var i = 0; i < nodes.length; i++) {
+      var n = nodes[i];
+      figma.currentPage.appendChild(n);
+      nodeIds.push(n.id);
+      if (i === 0) mainNode = n;
+    }
+    
+    // If we got multiple nodes, group them
+    if (nodes.length > 1) {
+      figma.currentPage.selection = nodes;
+      var group = figma.group(nodes, figma.currentPage);
+      mainNode = group;
+    }
+    
+    var result = {};
+    result.id = mainNode.id;
+    result.name = mainNode.name;
+    result.nodeCount = nodes.length;
+    result.nodeIds = nodeIds;
+    
+    return result;
+  });
+};
+
 // ── COMMAND EXECUTION ──
 
 function executeCommand(cmd) {

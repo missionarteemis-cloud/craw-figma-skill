@@ -9,7 +9,7 @@ var command = args[0];
 
 if (!command || command === "--help") {
   console.log("Usage: node figma_send.js <command> [--payload '{}']");
-  console.log("Commands: createRectangle, createFrame, createEllipse, createPolygon, createStar, createLine, createVector, createText, selectNode, updateNode, deleteNode, duplicateNode, moveNodes, getSelection, getPageInfo, setFillColor, setGradient, setStroke, setEffects, groupSelection, booleanOperation, flatten, createComponent, createInstance, addAutoLayout, constrainProportions, exportNode");
+  console.log("Commands: createRectangle, createFrame, createEllipse, createPolygon, createStar, createLine, createVector, createText, importSvg, selectNode, updateNode, deleteNode, duplicateNode, moveNodes, getSelection, getPageInfo, setFillColor, setGradient, setStroke, setEffects, groupSelection, booleanOperation, flatten, createComponent, createInstance, addAutoLayout, constrainProportions, exportNode");
   process.exit(command ? 0 : 1);
 }
 
