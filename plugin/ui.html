@@ -25,7 +25,6 @@
     overflow-x: hidden;
   }
 
-  /* ── Header bar ── */
   .header {
     display: flex;
     align-items: center;
@@ -52,9 +51,9 @@
     font-size: 10px;
     color: var(--accent);
     border: 1px solid rgba(124, 92, 252, 0.2);
+    cursor: default;
   }
 
-  /* ── Selection panel ── */
   .selection {
     padding: 8px 12px;
     background: var(--surface2);
@@ -73,16 +72,13 @@
     color: var(--accent);
   }
   .selection .node-info .tag .key { color: var(--text-dim); }
+  .selection .node-info .none { color: var(--text-dim); }
 
-  /* ── Chat section ── */
   .chat-area {
     padding: 8px 12px;
     border-bottom: var(--border);
   }
-  .chat-input-wrap {
-    display: flex;
-    gap: 6px;
-  }
+  .chat-input-wrap { display: flex; gap: 6px; }
   .chat-input-wrap input {
     flex: 1;
     background: var(--surface);
@@ -94,10 +90,7 @@
     outline: none;
     transition: border-color 0.2s;
   }
-  .chat-input-wrap input:focus {
-    border-color: var(--accent);
-    box-shadow: 0 0 0 1px var(--accent-glow);
-  }
+  .chat-input-wrap input:focus { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent-glow); }
   .chat-input-wrap input::placeholder { color: var(--text-dim); }
   .chat-input-wrap button {
     background: var(--accent);
@@ -106,17 +99,14 @@
     color: white;
     font-size: 12px;
     font-weight: 600;
-    padding: 0 12px;
+    padding: 0 14px;
     cursor: pointer;
     transition: background 0.2s, transform 0.1s;
   }
   .chat-input-wrap button:active { transform: scale(0.96); }
   .chat-input-wrap button:hover { background: #8b6efc; }
 
-  /* ── Log ── */
-  .log-section {
-    padding: 8px 12px;
-  }
+  .log-section { padding: 8px 12px; }
   .log-section .label {
     font-size: 10px;
     text-transform: uppercase;
@@ -128,9 +118,9 @@
     background: rgba(0,0,0,0.3);
     border-radius: 6px;
     padding: 8px;
-    max-height: 200px;
+    max-height: 220px;
     overflow-y: auto;
-    font-family: 'SF Mono', 'Fira Code', 'JetBrains Mono', 'Cascadia Code', monospace;
+    font-family: 'SF Mono', 'Fira Code', monospace;
     font-size: 10px;
     line-height: 1.6;
   }
@@ -142,10 +132,10 @@
   .log p.err { color: var(--red); }
   .log p.msg { color: var(--accent); font-style: italic; background: rgba(124,92,252,0.08); }
   .log p.pending { color: #f0c040; }
+  .log p.fig { color: #a29bfe; }
 </style>
 </head>
 <body>
-  <!-- Header -->
   <div class="header">
     <div class="dot" id="dot"></div>
     <div class="info">
@@ -155,23 +145,18 @@
     <span class="project-badge" id="projectBadge">📁 —</span>
   </div>
 
-  <!-- Selection -->
   <div class="selection">
     <div class="label">🎯 Selection</div>
-    <div class="node-info" id="selectionInfo">
-      <span style="color:var(--text-dim)">None</span>
-    </div>
+    <div class="node-info" id="selectionInfo"><span class="none">None</span></div>
   </div>
 
-  <!-- Chat input -->
   <div class="chat-area">
     <div class="chat-input-wrap">
-      <input type="text" id="chatInput" placeholder="Cosa vuoi fare? es: 'crea un pulsante blu 200x60'" autofocus>
+      <input type="text" id="chatInput" placeholder="Cosa vuoi fare? es: 'crea un pulsante blu'" autofocus>
       <button id="sendBtn">→</button>
     </div>
   </div>
 
-  <!-- Log -->
   <div class="log-section">
     <div class="label">Activity</div>
     <div class="log" id="log"></div>
@@ -187,7 +172,9 @@
     var sendBtn = document.getElementById('sendBtn');
 
     var CONNECTOR = 'http://localhost:9199';
+    var connected = false;
 
+    // ── Log helper ──
     function addLog(text, cls) {
       var p = document.createElement('p');
       p.className = cls || '';
@@ -200,7 +187,8 @@
       parent.postMessage({ pluginMessage: msg }, '*');
     }
 
-    function httpGet(url, cb) {
+    // ── HTTP helpers ──
+    function get(url, cb) {
       var xhr = new XMLHttpRequest();
       xhr.open('GET', url, true);
       xhr.timeout = 5000;
@@ -209,7 +197,7 @@
       xhr.send();
     }
 
-    function httpPost(url, body, cb) {
+    function post(url, body, cb) {
       var xhr = new XMLHttpRequest();
       xhr.open('POST', url, true);
       xhr.setRequestHeader('Content-Type', 'application/json');
@@ -219,36 +207,69 @@
       xhr.send(body);
     }
 
-    // ── Send a user message to queue ──
+    // ── Send user message to queue ──
     function sendUserMessage(text) {
-      var msg = {
-        type: 'user-message',
-        text: text,
-        page: '',
-        selection: '',
-        timestamp: Date.now()
-      };
+      var msg = { type: 'user-message', text: text, page: '', selection: '', timestamp: Date.now() };
       addLog('📝 ' + text, 'msg');
-      httpPost(CONNECTOR + '/queue', JSON.stringify(msg), function(err, res) {
-        if (err) addLog('⚠️ Failed to queue message', 'err');
-        else addLog('⏳ In attesa di Craw...', 'pending');
+      post(CONNECTOR + '/queue', JSON.stringify(msg), function(err, res) {
+        if (err) addLog('⚠️ Failed to queue', 'err');
+        else addLog('⏳ Waiting for Craw...', 'pending');
       });
     }
 
-    // ── Command execution from plugin code responses ──
+    // ── Poll for command queue → execute via plugin ──
+    function pollCommands() {
+      get(CONNECTOR + '/next-command?t=' + Date.now(), function(err, data) {
+        if (err) return;
+        if (data && data.command) {
+          addLog('⚡ ' + data.command, 'fig');
+          sendToPlugin({ type: 'exec-command', command: data });
+        }
+      });
+    }
+
+    // ── Poll for user message responses ──
+    function pollResponses() {
+      get(CONNECTOR + '/queue-responses?t=' + Date.now(), function(err, data) {
+        if (err) return;
+        if (!data || !data.responses) return;
+        data.responses.forEach(function(r) {
+          if (r.status === 'ok') {
+            addLog('✅ ' + (r.result ? (r.result.name || r.result.id || JSON.stringify(r.result).slice(0, 60)) : 'done'), 'done');
+          } else if (r.status === 'processing') {
+            addLog('⚙️ Craw is working...', 'pending');
+          } else if (r.status === 'error') {
+            addLog('❌ ' + (r.error || 'error'), 'err');
+          }
+        });
+      });
+    }
+
+    // ── Health & connection ──
+    function checkHealth() {
+      get(CONNECTOR + '/health?t=' + Date.now(), function(err, data) {
+        if (err) {
+          if (connected) {
+            connected = false;
+            dot.className = 'dot';
+            statusText.textContent = 'Disconnected';
+          }
+          return;
+        }
+        if (!connected) {
+          connected = true;
+          dot.className = 'dot connected';
+          statusText.textContent = 'Connected to Craw';
+          addLog('🦀 Connected to Craw', '');
+        }
+      });
+    }
+
+    // ── Handle plugin messages ──
     window.addEventListener('message', function(event) {
       var msg = event.data.pluginMessage || event.data;
       if (!msg) return;
 
-      if (msg.type === 'status') {
-        dot.className = 'dot' + (msg.connected ? ' connected' : '');
-        statusText.textContent = msg.connected ? 'Connected to Craw' : 'Disconnected';
-        return;
-      }
-      if (msg.type === 'log') {
-        addLog(msg.text, msg.level);
-        return;
-      }
       if (msg.type === 'page-info') {
         projectBadge.textContent = '📁 ' + msg.name;
         return;
@@ -258,38 +279,21 @@
           var html = '';
           msg.nodes.forEach(function(n) {
             html += '<span class="tag">' + n.name + ' <span class="key">' + n.type + '</span></span>';
-            if (n.width) html += '<span class="tag">' + Math.round(n.width) + '×' + Math.round(n.height) + '</span>';
+            if (n.width) html += '<span class="tag">' + Math.round(n.width) + '\u00D7' + Math.round(n.height) + '</span>';
           });
           selectionInfo.innerHTML = html;
         } else {
-          selectionInfo.innerHTML = '<span style="color:var(--text-dim)">None</span>';
+          selectionInfo.innerHTML = '<span class="none">None</span>';
         }
         return;
       }
-
-      // HTTP responses from plugin code (commands execution results)
-      if (msg.type === 'http-response') {
-        var data = msg.responseData;
-        if (!data) return;
-
-        if (msg.url.indexOf('/next-command') !== -1) {
-          if (data && data.command) {
-            sendToPlugin({ type: 'exec-command', command: data });
-          }
-        } else if (msg.url.indexOf('/health') !== -1) {
-          sendToPlugin({ type: 'http-response', url: msg.url, status: 200, responseData: data });
-        }
-        return;
-      }
-      if (msg.type === 'http-error') {
-        if (msg.url.indexOf('/health') !== -1) {
-          sendToPlugin({ type: 'http-error', url: msg.url });
-        }
+      if (msg.type === 'log') {
+        addLog(msg.text, msg.level);
         return;
       }
     });
 
-    // ── Chat input handlers ──
+    // ── Input handlers ──
     chatInput.addEventListener('keydown', function(e) {
       if (e.key === 'Enter' && chatInput.value.trim()) {
         sendUserMessage(chatInput.value.trim());
@@ -303,46 +307,17 @@
       }
     });
 
-    // ── Poll for queue responses ──
-    setInterval(function() {
-      httpGet(CONNECTOR + '/queue-responses?t=' + Date.now(), function(err, data) {
-        if (err) return;
-        if (!data || !data.responses) return;
-        data.responses.forEach(function(r) {
-          if (r.status === 'ok') {
-            addLog('✅ ' + (r.result ? (r.result.name || JSON.stringify(r.result).slice(0, 60)) : 'done'), 'done');
-          } else if (r.status === 'processing') {
-            addLog('⚙️ Craw is working...', 'pending');
-          } else if (r.status === 'error') {
-            addLog('❌ ' + (r.error || 'error'), 'err');
-          }
-        });
-      });
-    }, 2000);
-
-    // ── Health check and poll for commands from plugin ──
-    function checkHealth() {
-      httpGet(CONNECTOR + '/health?t=' + Date.now(), function(err, data) {
-        if (err) {
-          sendToPlugin({ type: 'http-error', url: CONNECTOR + '/health' });
-          return;
-        }
-        sendToPlugin({ type: 'http-response', url: CONNECTOR + '/health', status: 200, responseData: data });
-        if (!window._pollStarted) {
-          window._pollStarted = true;
-          setInterval(function() {
-            httpGet(CONNECTOR + '/next-command?t=' + Date.now(), function(err, data) {
-              if (err) return;
-              sendToPlugin({ type: 'http-response', url: CONNECTOR + '/next-command', status: 200, responseData: data });
-            });
-          }, 1500);
-        }
-      });
-    }
-
+    // ── Start ──
     sendToPlugin({ type: 'ready' });
     addLog('🦀 Craw Figma Connector ready', '');
+
+    // Health check
+    setInterval(checkHealth, 3000);
     setTimeout(checkHealth, 300);
+
+    // Poll commands & responses
+    setInterval(pollCommands, 1500);
+    setInterval(pollResponses, 2000);
   </script>
 </body>
 </html>

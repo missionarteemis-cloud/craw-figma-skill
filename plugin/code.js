@@ -1,9 +1,5 @@
-/// Craw Figma Connector — Plugin Code (ES5, HTTP via UI bridge)
-/// Plugin code talks to UI via postMessage; UI does real HTTP
-
-var pollInterval = null;
-var POLL_URL = "http://localhost:9199";
-var POLLING_ACTIVE = false;
+/// Craw Figma Connector — Plugin Code (ES5)
+/// Receives commands from UI via postMessage, executes Figma API
 
 function postUI(type, data) {
   data = data || {};
@@ -116,22 +112,12 @@ var commands = {
 
   getSelection: function() {
     return figma.currentPage.selection.map(function(n) {
-      return {
-        id: n.id, name: n.name, type: n.type,
-        x: "x" in n ? n.x : undefined,
-        y: "y" in n ? n.y : undefined,
-        width: "width" in n ? n.width : undefined,
-        height: "height" in n ? n.height : undefined
-      };
+      return { id: n.id, name: n.name, type: n.type, x: n.x, y: n.y, width: n.width, height: n.height };
     });
   },
 
   getPageInfo: function() {
-    return {
-      name: figma.currentPage.name,
-      id: figma.currentPage.id,
-      childCount: figma.currentPage.children.length
-    };
+    return { name: figma.currentPage.name, id: figma.currentPage.id, childCount: figma.currentPage.children.length };
   },
 
   setFillColor: function(p) {
@@ -149,95 +135,66 @@ var commands = {
   }
 };
 
-function httpGet(url) {
-  figma.ui.postMessage({ type: "http-get", url: url });
-}
-
-function httpPost(url, body) {
-  figma.ui.postMessage({ type: "http-post", url: url, body: body });
-}
-
-function pollForCommands() {
-  var ts = Date.now();
-  httpGet(POLL_URL + "/next-command?t=" + ts);
-}
-
-function sendResultToConnector(id, status, data) {
-  httpPost(POLL_URL + "/result", JSON.stringify({
-    id: id,
-    status: status,
-    data: status === "ok" ? data : { error: data }
-  }));
-}
-
 function executeCommand(cmd) {
-  if (!cmd || !cmd.command) return;
+  if (!cmd || !cmd.command) {
+    postUI("log", { text: "Invalid command", level: "err" });
+    return;
+  }
   postUI("log", { text: "Exec: " + cmd.command, level: "cmd" });
   var handler = commands[cmd.command];
   if (!handler) {
-    sendResultToConnector(cmd.id, "error", "Unknown command: " + cmd.command);
+    postUI("log", { text: "Unknown command: " + cmd.command, level: "err" });
     return;
   }
   try {
     var result = handler(cmd.payload || {});
     if (result && typeof result.then === "function") {
       result.then(
-        function(res) { sendResultToConnector(cmd.id, "ok", res); },
-        function(err) { sendResultToConnector(cmd.id, "error", err.message || String(err)); }
+        function(res) { postUI("log", { text: "Done: " + (res.name || res.id || JSON.stringify(res).slice(0, 60)), level: "done" }); },
+        function(err) { postUI("log", { text: "Error: " + (err.message || String(err)), level: "err" }); }
       );
     } else {
-      sendResultToConnector(cmd.id, "ok", result);
+      postUI("log", { text: "Done: " + JSON.stringify(result).slice(0, 80), level: "done" });
     }
   } catch(err) {
-    sendResultToConnector(cmd.id, "error", err.message || String(err));
+    postUI("log", { text: "Error: " + (err.message || String(err)), level: "err" });
   }
 }
 
-figma.showUI(__html__, { width: 280, height: 400 });
+// Periodic selection and page info updates
+function startPeriodicUpdates() {
+  setInterval(function() {
+    try {
+      var page = figma.currentPage;
+      postUI("page-info", { name: page.name, id: page.id, childCount: page.children.length });
+      var sel = figma.currentPage.selection.map(function(n) {
+        return { id: n.id, name: n.name, type: n.type, x: n.x, y: n.y, width: n.width, height: n.height };
+      });
+      postUI("selection-update", { nodes: sel });
+    } catch(e) {}
+  }, 1000);
+}
+
+figma.showUI(__html__, { width: 320, height: 500 });
 figma.skipInvisibleInstanceChildren = true;
 
 figma.ui.onmessage = function(msg) {
-  // ready event from UI
   if (msg.type === "ready") {
     postUI("log", { text: "Plugin loaded", level: "" });
+    startPeriodicUpdates();
     return;
   }
 
-  // HTTP response from UI
-  if (msg.type === "http-response") {
-    var data = msg.responseData;
-    if (!data) return;
-
-    if (msg.url.indexOf("/next-command") !== -1) {
-      if (data && data.command) {
-        executeCommand(data);
-        setTimeout(pollForCommands, 200);
-      }
-    } else if (msg.url.indexOf("/health") !== -1) {
-      postUI("status", { connected: true });
-      postUI("log", { text: "Connected to Craw", level: "" });
-      // Send page info to UI
-      var page = figma.currentPage;
-      postUI("page-info", { name: page.name, id: page.id, childCount: page.children.length });
-      if (!POLLING_ACTIVE) {
-        POLLING_ACTIVE = true;
-        pollForCommands();
-        setInterval(pollForCommands, 1500);
-        // Poll selection periodically
-        setInterval(function() {
-          var sel = figma.currentPage.selection.map(function(n) {
-            return { id: n.id, name: n.name, type: n.type, width: n.width, height: n.height };
-          });
-          postUI("selection-update", { nodes: sel });
-        }, 1000);
-      }
-    }
+  // Execute command received from UI
+  if (msg.type === "exec-command") {
+    executeCommand(msg.command);
+    return;
   }
 
-  // HTTP error from UI
-  if (msg.type === "http-error") {
-    if (msg.url.indexOf("/health") !== -1) {
-      postUI("status", { connected: false });
-    }
+  // Update page info (from UI)
+  if (msg.type === "update-page") {
+    var page = figma.currentPage;
+    postUI("page-info", { name: page.name, id: page.id, childCount: page.children.length });
+    return;
   }
 };
