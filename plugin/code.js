@@ -1,5 +1,5 @@
 /// Craw Figma Connector — Plugin Code (ES5)
-/// Receives commands from UI via postMessage, executes Figma API
+/// Receives commands from UI via postMessage, executes Figma API, sends results back
 
 function postUI(type, data) {
   data = data || {};
@@ -135,33 +135,46 @@ var commands = {
   }
 };
 
+function sendResultToUI(commandId, status, data) {
+  postUI("command-result", {
+    commandId: commandId,
+    status: status,
+    data: status === "ok" ? data : { error: data }
+  });
+}
+
 function executeCommand(cmd) {
-  if (!cmd || !cmd.command) {
-    postUI("log", { text: "Invalid command", level: "err" });
-    return;
-  }
+  if (!cmd || !cmd.command) { postUI("log", { text: "Invalid command", level: "err" }); return; }
   postUI("log", { text: "Exec: " + cmd.command, level: "cmd" });
   var handler = commands[cmd.command];
   if (!handler) {
-    postUI("log", { text: "Unknown command: " + cmd.command, level: "err" });
+    postUI("log", { text: "Unknown: " + cmd.command, level: "err" });
+    if (cmd.id) sendResultToUI(cmd.id, "error", "Unknown command: " + cmd.command);
     return;
   }
   try {
     var result = handler(cmd.payload || {});
     if (result && typeof result.then === "function") {
       result.then(
-        function(res) { postUI("log", { text: "Done: " + (res.name || res.id || JSON.stringify(res).slice(0, 60)), level: "done" }); },
-        function(err) { postUI("log", { text: "Error: " + (err.message || String(err)), level: "err" }); }
+        function(res) {
+          postUI("log", { text: "Done: " + (res.name || res.id || JSON.stringify(res).slice(0, 80)), level: "done" });
+          if (cmd.id) sendResultToUI(cmd.id, "ok", res);
+        },
+        function(err) {
+          postUI("log", { text: "Error: " + (err.message || String(err)), level: "err" });
+          if (cmd.id) sendResultToUI(cmd.id, "error", err.message || String(err));
+        }
       );
     } else {
       postUI("log", { text: "Done: " + JSON.stringify(result).slice(0, 80), level: "done" });
+      if (cmd.id) sendResultToUI(cmd.id, "ok", result);
     }
   } catch(err) {
     postUI("log", { text: "Error: " + (err.message || String(err)), level: "err" });
+    if (cmd.id) sendResultToUI(cmd.id, "error", err.message || String(err));
   }
 }
 
-// Periodic selection and page info updates
 function startPeriodicUpdates() {
   setInterval(function() {
     try {
@@ -180,21 +193,16 @@ figma.skipInvisibleInstanceChildren = true;
 
 figma.ui.onmessage = function(msg) {
   if (msg.type === "ready") {
-    postUI("log", { text: "Plugin loaded", level: "" });
+    postUI("log", { text: "Plugin loaded", level: "");
     startPeriodicUpdates();
     return;
   }
-
-  // Execute command received from UI
   if (msg.type === "exec-command") {
     executeCommand(msg.command);
     return;
   }
-
-  // Update page info (from UI)
   if (msg.type === "update-page") {
-    var page = figma.currentPage;
-    postUI("page-info", { name: page.name, id: page.id, childCount: page.children.length });
+    postUI("page-info", { name: figma.currentPage.name, id: figma.currentPage.id, childCount: figma.currentPage.children.length });
     return;
   }
 };
