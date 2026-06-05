@@ -170,6 +170,9 @@
 
     checkHealth();
     setInterval(checkHealth, 3000);
+    // Also poll commands directly from UI in case plugin ready is slow
+    setInterval(pollCommand, 2000);
+    setTimeout(pollCommand, 500);
   </script>
 </body>
 </html>

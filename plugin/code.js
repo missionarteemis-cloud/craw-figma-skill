@@ -262,17 +262,17 @@ function startSelectionUpdates() {
 figma.showUI(__html__, { width: 320, height: 400 });
 figma.skipInvisibleInstanceChildren = true;
 
-figma.ui.onmessage = function(msg) {
-  if (msg.type === "ready") {
-    var logMsg = {};
-    logMsg.text = "Plugin loaded";
-    logMsg.level = "";
-    postUI("log", logMsg);
-    startPolling();
-    startSelectionUpdates();
-    return;
-  }
+// Auto-start after 1s regardless of ready message
+setTimeout(function() {
+  var logMsg = {};
+  logMsg.text = "Plugin loaded";
+  logMsg.level = "";
+  postUI("log", logMsg);
+  startPolling();
+  startSelectionUpdates();
+}, 1000);
 
+figma.ui.onmessage = function(msg) {
   // UI forwarded a command from the connector
   if (msg.type === "command") {
     executeCommand(msg.cmd);
