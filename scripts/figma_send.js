@@ -2,7 +2,7 @@
 
 var http = require("http");
 
-var CONNECTOR_URL = "http://localhost:9200";
+var CONNECTOR_URL = "http://localhost:9199";
 
 var args = process.argv.slice(2);
 var command = args[0];

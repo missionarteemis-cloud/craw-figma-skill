@@ -1,9 +1,10 @@
 /// Craw Figma Connector — Plugin Code (ES5)
-/// Connects to the local WebSocket bridge, receives commands, executes Figma API
+/// HTTP polling architecture: plugin polls commands, executes them, sends results
 
-var ws = null;
-var WS_URL = "ws://localhost:9199";
-var reconnectTimer = null;
+var POLL_INTERVAL = 1500;
+var CONNECTOR = "http://localhost:9199";
+var pollTimer = null;
+var selectionTimer = null;
 
 function postUI(type, data) {
   var msg = {};
@@ -24,74 +25,65 @@ function hasPosition(node) { return "x" in node && "y" in node; }
 var commands = {};
 
 commands.createRectangle = function(p) {
-  return figma.loadFontAsync({ family: "Inter", style: "Regular" }).then(function() {
-    var rect = figma.createRectangle();
-    rect.x = typeof p.x !== "undefined" ? p.x : 0;
-    rect.y = typeof p.y !== "undefined" ? p.y : 0;
-    rect.resize(typeof p.width !== "undefined" ? p.width : 200, typeof p.height !== "undefined" ? p.height : 100);
-    if (p.cornerRadius) rect.cornerRadius = p.cornerRadius;
-    if (p.fills) rect.fills = p.fills;
-    if (p.strokes) rect.strokes = p.strokes;
-    if (p.strokeWeight) rect.strokeWeight = p.strokeWeight;
-    if (p.effects) rect.effects = p.effects;
-    if (p.name) rect.name = p.name;
-    figma.currentPage.appendChild(rect);
-    var result = {};
-    result.id = rect.id; result.name = rect.name;
-    result.x = rect.x; result.y = rect.y;
-    result.width = rect.width; result.height = rect.height;
-    return result;
-  });
+  var rect = figma.createRectangle();
+  rect.x = typeof p.x !== "undefined" ? p.x : 0;
+  rect.y = typeof p.y !== "undefined" ? p.y : 0;
+  rect.resize(typeof p.width !== "undefined" ? p.width : 200, typeof p.height !== "undefined" ? p.height : 100);
+  if (p.cornerRadius) rect.cornerRadius = p.cornerRadius;
+  if (p.fills) rect.fills = p.fills;
+  if (p.strokes) rect.strokes = p.strokes;
+  if (p.strokeWeight) rect.strokeWeight = p.strokeWeight;
+  if (p.effects) rect.effects = p.effects;
+  if (p.name) rect.name = p.name;
+  figma.currentPage.appendChild(rect);
+  var result = {};
+  result.id = rect.id; result.name = rect.name;
+  result.x = rect.x; result.y = rect.y;
+  result.width = rect.width; result.height = rect.height;
+  return result;
 };
 
 commands.createFrame = function(p) {
-  return figma.loadFontAsync({ family: "Inter", style: "Regular" }).then(function() {
-    var frame = figma.createFrame();
-    frame.x = typeof p.x !== "undefined" ? p.x : 0;
-    frame.y = typeof p.y !== "undefined" ? p.y : 0;
-    frame.resize(typeof p.width !== "undefined" ? p.width : 400, typeof p.height !== "undefined" ? p.height : 300);
-    if (p.fills) frame.fills = p.fills;
-    if (p.effects) frame.effects = p.effects;
-    if (p.name) frame.name = p.name;
-    figma.currentPage.appendChild(frame);
-    var result = {};
-    result.id = frame.id; result.name = frame.name;
-    return result;
-  });
+  var frame = figma.createFrame();
+  frame.x = typeof p.x !== "undefined" ? p.x : 0;
+  frame.y = typeof p.y !== "undefined" ? p.y : 0;
+  frame.resize(typeof p.width !== "undefined" ? p.width : 400, typeof p.height !== "undefined" ? p.height : 300);
+  if (p.fills) frame.fills = p.fills;
+  if (p.effects) frame.effects = p.effects;
+  if (p.name) frame.name = p.name;
+  figma.currentPage.appendChild(frame);
+  var result = {};
+  result.id = frame.id; result.name = frame.name;
+  return result;
 };
 
 commands.createEllipse = function(p) {
-  return figma.loadFontAsync({ family: "Inter", style: "Regular" }).then(function() {
-    var ell = figma.createEllipse();
-    ell.x = typeof p.x !== "undefined" ? p.x : 0;
-    ell.y = typeof p.y !== "undefined" ? p.y : 0;
-    ell.resize(typeof p.width !== "undefined" ? p.width : 100, typeof p.height !== "undefined" ? p.height : 100);
-    if (p.fills) ell.fills = p.fills;
-    if (p.effects) ell.effects = p.effects;
-    if (p.name) ell.name = p.name;
-    figma.currentPage.appendChild(ell);
-    var result = {};
-    result.id = ell.id; result.name = ell.name;
-    return result;
-  });
+  var ell = figma.createEllipse();
+  ell.x = typeof p.x !== "undefined" ? p.x : 0;
+  ell.y = typeof p.y !== "undefined" ? p.y : 0;
+  ell.resize(typeof p.width !== "undefined" ? p.width : 100, typeof p.height !== "undefined" ? p.height : 100);
+  if (p.fills) ell.fills = p.fills;
+  if (p.effects) ell.effects = p.effects;
+  if (p.name) ell.name = p.name;
+  figma.currentPage.appendChild(ell);
+  var result = {};
+  result.id = ell.id; result.name = ell.name;
+  return result;
 };
 
 commands.createText = function(p) {
-  return figma.loadFontAsync({ family: "Inter", style: "Regular" }).then(function() {
-    var text = figma.createText();
-    text.x = typeof p.x !== "undefined" ? p.x : 0;
-    text.y = typeof p.y !== "undefined" ? p.y : 0;
-    if (p.name) text.name = p.name;
-    if (typeof p.characters !== "undefined") text.characters = p.characters;
-    if (p.fontSize) text.fontSize = p.fontSize;
-    if (p.fills) text.fills = p.fills;
-    if (p.textAlignHorizontal) text.textAlignHorizontal = p.textAlignHorizontal;
-    if (p.fontName && p.fontName.family) text.fontName = p.fontName;
-    figma.currentPage.appendChild(text);
-    var result = {};
-    result.id = text.id; result.name = text.name;
-    return result;
-  });
+  var text = figma.createText();
+  text.characters = typeof p.characters !== "undefined" ? p.characters : "Text";
+  text.x = typeof p.x !== "undefined" ? p.x : 0;
+  text.y = typeof p.y !== "undefined" ? p.y : 0;
+  if (p.name) text.name = p.name;
+  if (p.fontSize) text.fontSize = p.fontSize;
+  if (p.fills) text.fills = p.fills;
+  if (p.textAlignHorizontal) text.textAlignHorizontal = p.textAlignHorizontal;
+  figma.currentPage.appendChild(text);
+  var result = {};
+  result.id = text.id; result.name = text.name;
+  return result;
 };
 
 commands.selectNode = function(p) {
@@ -173,103 +165,108 @@ commands.groupSelection = function() {
   return result;
 };
 
-function connect() {
-  if (ws && ws.readyState === WebSocket.OPEN) return;
-  try {
-    ws = new WebSocket(WS_URL);
-  } catch(e) {
-    scheduleReconnect();
+function pollNextCommand() {
+  var xhr = new XMLHttpRequest();
+  xhr.open("GET", CONNECTOR + "/next-command?t=" + Date.now(), true);
+  xhr.timeout = 5000;
+  xhr.onload = function() {
+    if (xhr.status === 200) {
+      try {
+        var data = JSON.parse(xhr.responseText);
+        if (data && data.command) {
+          executeCommand(data);
+        }
+      } catch(e) {}
+    }
+  };
+  xhr.onerror = function() {};
+  xhr.send();
+}
+
+function executeCommand(cmd) {
+  var command = cmd.command;
+  var payload = cmd.payload || {};
+  var id = cmd.id;
+
+  var logMsg = {};
+  logMsg.text = "Exec: " + command;
+  logMsg.level = "cmd";
+  postUI("log", logMsg);
+
+  var handler = commands[command];
+  if (!handler) {
+    var errMsg = {};
+    errMsg.text = "Unknown: " + command;
+    errMsg.level = "err";
+    postUI("log", errMsg);
+    sendResult(id, "error", { error: "Unknown command: " + command });
     return;
   }
-  ws.onopen = function() {
-    var log = {};
-    log.text = "Connected to Craw";
-    log.level = "";
-    postUI("log", log);
-    var statusMsg = {};
-    statusMsg.connected = true;
-    postUI("status", statusMsg);
-    startPeriodicUpdates();
-  };
-  ws.onmessage = function(event) {
-    var msg;
-    try {
-      msg = JSON.parse(event.data);
-    } catch(e) {
-      return;
+
+  try {
+    var result = handler(payload);
+    if (result && typeof result.then === "function") {
+      result.then(
+        function(res) {
+          var doneMsg = {};
+          doneMsg.text = "Done: " + JSON.stringify(res).slice(0, 80);
+          doneMsg.level = "done";
+          postUI("log", doneMsg);
+          sendResult(id, "ok", res);
+        },
+        function(err) {
+          var errMsg = {};
+          errMsg.text = "Error: " + (err.message || String(err));
+          errMsg.level = "err";
+          postUI("log", errMsg);
+          sendResult(id, "error", { error: err.message || String(err) });
+        }
+      );
+    } else {
+      var doneMsg = {};
+      doneMsg.text = "Done: " + JSON.stringify(result).slice(0, 80);
+      doneMsg.level = "done";
+      postUI("log", doneMsg);
+      sendResult(id, "ok", result);
     }
-    var command = msg.command;
-    var payload = msg.payload || {};
-    var logMsg = {};
-    logMsg.text = "Exec: " + command;
-    logMsg.level = "cmd";
-    postUI("log", logMsg);
-    var handler = commands[command];
-    if (!handler) {
-      var errMsg = {};
-      errMsg.text = "Unknown: " + command;
-      errMsg.level = "err";
-      postUI("log", errMsg);
-      return;
-    }
-    try {
-      var result = handler(payload);
-      if (result && typeof result.then === "function") {
-        result.then(
-          function(res) {
-            var doneMsg = {};
-            doneMsg.text = "Done: " + (res.name || res.id || JSON.stringify(res).slice(0, 80));
-            doneMsg.level = "done";
-            postUI("log", doneMsg);
-          },
-          function(err) {
-            var errMsg = {};
-            errMsg.text = "Error: " + (err.message || String(err));
-            errMsg.level = "err";
-            postUI("log", errMsg);
-          }
-        );
-      } else {
-        var doneMsg = {};
-        doneMsg.text = "Done: " + JSON.stringify(result).slice(0, 80);
-        doneMsg.level = "done";
-        postUI("log", doneMsg);
-      }
-    } catch(err) {
-      var errMsg = {};
-      errMsg.text = "Error: " + (err.message || String(err));
-      errMsg.level = "err";
-      postUI("log", errMsg);
-    }
-  };
-  ws.onclose = function() {
-    var statusMsg = {};
-    statusMsg.connected = false;
-    postUI("status", statusMsg);
-    ws = null;
-    scheduleReconnect();
-  };
-  ws.onerror = function() {
-    if (ws) ws.close();
-  };
+  } catch(err) {
+    var errMsg = {};
+    errMsg.text = "Error: " + (err.message || String(err));
+    errMsg.level = "err";
+    postUI("log", errMsg);
+    sendResult(id, "error", { error: err.message || String(err) });
+  }
 }
 
-function scheduleReconnect() {
-  if (reconnectTimer) return;
-  reconnectTimer = setTimeout(function() {
-    reconnectTimer = null;
-    connect();
-  }, 3000);
+function sendResult(id, status, data) {
+  var resultPayload = {};
+  resultPayload.id = id;
+  resultPayload.status = status;
+  resultPayload.data = data;
+  var body = JSON.stringify(resultPayload);
+
+  var xhr = new XMLHttpRequest();
+  xhr.open("POST", CONNECTOR + "/result", true);
+  xhr.setRequestHeader("Content-Type", "application/json");
+  xhr.onload = function() {};
+  xhr.onerror = function() {};
+  xhr.send(body);
 }
 
-function startPeriodicUpdates() {
-  setInterval(function() {
+function startPolling() {
+  pollTimer = setInterval(pollNextCommand, POLL_INTERVAL);
+  setTimeout(pollNextCommand, 300);
+}
+
+function startSelectionUpdates() {
+  selectionTimer = setInterval(function() {
     try {
       var pageMsg = {};
       pageMsg.name = figma.currentPage.name;
       pageMsg.id = figma.currentPage.id;
       pageMsg.childCount = figma.currentPage.children.length;
       postUI("page-info", pageMsg);
+
       var selArray = figma.currentPage.selection.map(function(n) {
         var r = {};
         r.id = n.id;
@@ -285,10 +282,10 @@ function startPeriodicUpdates() {
       selMsg.nodes = selArray;
       postUI("selection-update", selMsg);
     } catch(e) {}
-  }, 1000);
+  }, 1500);
 }
 
-figma.showUI(__html__, { width: 320, height: 500 });
+figma.showUI(__html__, { width: 320, height: 400 });
 figma.skipInvisibleInstanceChildren = true;
 
 figma.ui.onmessage = function(msg) {
@@ -297,6 +294,7 @@ figma.ui.onmessage = function(msg) {
     logMsg.text = "Plugin loaded";
     logMsg.level = "";
     postUI("log", logMsg);
-    connect();
+    startPolling();
+    startSelectionUpdates();
   }
 };
