@@ -207,10 +207,10 @@ function loadDefaultFonts() {
     { family: 'Roboto', style: 'Medium' },
     { family: 'JetBrains Mono', style: 'Regular' },
     { family: 'JetBrains Mono', style: 'Bold' },
-    // DR's Lab custom fonts
-    { family: 'LoRes9PlusOTNarrow', style: 'Regular' },
+    // DR's Lab custom fonts — use real internal font names
+    { family: 'LoRes 9 Plus OT Narrow', style: 'Regular' },
     { family: 'Saint', style: 'Regular' },
-    { family: 'FreeFat', style: 'Regular' },
+    { family: 'FREE FAT FONT', style: 'Regular' },
   ];
   var promises = [];
   for (var i = 0; i < fontPairs.length; i++) {

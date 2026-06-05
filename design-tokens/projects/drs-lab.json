@@ -28,11 +28,11 @@
       "mono":     { "$value": "'LoRes9PlusOTNarrow', monospace", "$type": "fontFamily" }
     },
     "figma": {
-      "$description": "Font families now installed on macOS and available in Figma.",
-      "display":  { "$value": "Saint", "$type": "fontFamily", "$description": "Editorial display — installed on macOS" },
-      "heading":  { "$value": "FreeFat", "$type": "fontFamily", "$description": "Bold emphatic — installed on macOS" },
-      "ui":       { "$value": "LoRes9PlusOTNarrow", "$type": "fontFamily", "$description": "Retro UI — installed on macOS" },
-      "mono":     { "$value": "LoRes9PlusOTNarrow", "$type": "fontFamily" }
+      "$description": "Font families installed on macOS — real internal PostScript names.",
+      "display":  { "$value": "Saint", "$type": "fontFamily", "$description": "Editorial display — Figma name: Saint" },
+      "heading":  { "$value": "FREE FAT FONT", "$type": "fontFamily", "$description": "Bold emphatic — Figma name: FREE FAT FONT" },
+      "ui":       { "$value": "LoRes 9 Plus OT Narrow", "$type": "fontFamily", "$description": "Retro UI — Figma name: LoRes 9 Plus OT Narrow" },
+      "mono":     { "$value": "LoRes 9 Plus OT Narrow", "$type": "fontFamily" }
     }
   },
 
