@@ -28,11 +28,11 @@
       "mono":     { "$value": "'LoRes9PlusOTNarrow', monospace", "$type": "fontFamily" }
     },
     "figma": {
-      "$description": "Font families actually available in Figma (system fonts). Falls back when custom fonts aren't installed.",
-      "display":  { "$value": "Inter", "$type": "fontFamily", "$description": "Figma fallback for Saint (install Saint on macOS for real font)" },
-      "heading":  { "$value": "Inter", "$type": "fontFamily", "$description": "Figma fallback for FreeFat" },
-      "ui":       { "$value": "Inter", "$type": "fontFamily", "$description": "Figma fallback for LoRes9PlusOTNarrow" },
-      "mono":     { "$value": "JetBrains Mono", "$type": "fontFamily" }
+      "$description": "Font families now installed on macOS and available in Figma.",
+      "display":  { "$value": "Saint", "$type": "fontFamily", "$description": "Editorial display — installed on macOS" },
+      "heading":  { "$value": "FreeFat", "$type": "fontFamily", "$description": "Bold emphatic — installed on macOS" },
+      "ui":       { "$value": "LoRes9PlusOTNarrow", "$type": "fontFamily", "$description": "Retro UI — installed on macOS" },
+      "mono":     { "$value": "LoRes9PlusOTNarrow", "$type": "fontFamily" }
     }
   },
 
