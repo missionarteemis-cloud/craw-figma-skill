@@ -46,31 +46,70 @@
   </div>
   <div class="log" id="log"></div>
   <script>
-    const dot = document.getElementById('dot');
-    const statusText = document.getElementById('statusText');
-    const log = document.getElementById('log');
+    var dot = document.getElementById('dot');
+    var statusText = document.getElementById('statusText');
+    var logEl = document.getElementById('log');
 
-    function addLog(msg, cls = '') {
-      const p = document.createElement('p');
-      p.className = cls;
+    function addLog(msg, cls) {
+      var p = document.createElement('p');
+      p.className = cls || '';
       p.textContent = '> ' + msg;
-      log.appendChild(p);
-      log.scrollTop = log.scrollHeight;
+      logEl.appendChild(p);
+      logEl.scrollTop = logEl.scrollHeight;
     }
 
-    // Connect to parent plugin code
-    window.onmessage = (event) => {
-      const msg = event.data.pluginMessage;
+    // Handle HTTP requests from plugin code
+    window.addEventListener('message', function(event) {
+      var msg = event.data.pluginMessage;
       if (!msg) return;
+
+      // UI updates from plugin
       if (msg.type === 'status') {
         dot.className = 'dot' + (msg.connected ? ' connected' : '');
         statusText.textContent = msg.connected ? 'Connected to Craw' : 'Disconnected';
-      } else if (msg.type === 'log') {
-        addLog(msg.text, msg.level || '');
+        return;
       }
-    };
+      if (msg.type === 'log') {
+        addLog(msg.text, msg.level);
+        return;
+      }
 
-    // Tell plugin code we're ready
+      // HTTP request from plugin
+      if (msg.type === 'http-get') {
+        var xhr = new XMLHttpRequest();
+        xhr.open('GET', msg.url, true);
+        xhr.timeout = 5000;
+        xhr.onload = function() {
+          var data = null;
+          try { data = JSON.parse(xhr.responseText); } catch(e) {}
+          parent.postMessage({ pluginMessage: { type: 'http-response', url: msg.url, status: xhr.status, responseData: data } }, '*');
+        };
+        xhr.onerror = function() {
+          parent.postMessage({ pluginMessage: { type: 'http-error', url: msg.url, error: 'Network error' } }, '*');
+        };
+        xhr.send();
+        return;
+      }
+
+      if (msg.type === 'http-post') {
+        var xhr = new XMLHttpRequest();
+        xhr.open('POST', msg.url, true);
+        xhr.setRequestHeader('Content-Type', 'application/json');
+        xhr.timeout = 5000;
+        xhr.onload = function() {
+          var data = null;
+          try { data = JSON.parse(xhr.responseText); } catch(e) {}
+          parent.postMessage({ pluginMessage: { type: 'http-response', url: msg.url, status: xhr.status, responseData: data } }, '*');
+        };
+        xhr.onerror = function() {
+          parent.postMessage({ pluginMessage: { type: 'http-error', url: msg.url, error: 'Network error' } }, '*');
+        };
+        xhr.send(msg.body);
+        return;
+      }
+    });
+
+    // Tell plugin we're ready
     parent.postMessage({ pluginMessage: { type: 'ready' } }, '*');
     addLog('Craw Figma Connector ready');
   </script>
