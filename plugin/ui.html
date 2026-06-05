@@ -3,58 +3,195 @@
 <head>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  body {
-    background: #1a1a2e;
-    color: #e0e0e0;
-    font-family: -apple-system, sans-serif;
-    padding: 16px;
-    font-size: 13px;
+  :root {
+    --bg: #0f0f1a;
+    --surface: #1a1a2e;
+    --surface2: #16213e;
+    --accent: #7c5cfc;
+    --accent-glow: rgba(124, 92, 252, 0.3);
+    --green: #2ecc71;
+    --red: #e74c3c;
+    --text: #e0e0e0;
+    --text-dim: #8892a4;
+    --radius: 8px;
+    --border: 1px solid rgba(255,255,255,0.06);
   }
-  .status { 
-    display: flex; align-items: center; gap: 8px;
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    font-size: 12px;
+    padding: 0;
+    overflow-x: hidden;
+  }
+
+  /* ── Header bar ── */
+  .header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
     padding: 10px 12px;
-    background: #16213e;
-    border-radius: 8px;
-    margin-bottom: 12px;
+    background: var(--surface);
+    border-bottom: var(--border);
   }
   .dot {
-    width: 8px; height: 8px; border-radius: 50%;
-    background: #e74c3c;
-    transition: background 0.3s;
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--red);
+    flex-shrink: 0;
+    transition: background 0.3s, box-shadow 0.3s;
   }
-  .dot.connected { background: #2ecc71; }
-  .log {
-    background: #0f3460;
-    border-radius: 6px;
-    padding: 10px;
-    max-height: 300px;
-    overflow-y: auto;
-    font-family: monospace;
+  .dot.connected { background: var(--green); box-shadow: 0 0 6px rgba(46,204,113,0.5); }
+  .header .info { flex: 1; }
+  .header .info .title { font-size: 12px; font-weight: 600; }
+  .header .info .sub { font-size: 10px; color: var(--text-dim); margin-top: 1px; }
+  .project-badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 2px 8px;
+    background: var(--surface2);
+    border-radius: 4px;
+    font-size: 10px;
+    color: var(--accent);
+    border: 1px solid rgba(124, 92, 252, 0.2);
+  }
+
+  /* ── Selection panel ── */
+  .selection {
+    padding: 8px 12px;
+    background: var(--surface2);
+    border-bottom: var(--border);
     font-size: 11px;
-    line-height: 1.5;
+    min-height: 32px;
   }
-  .log p { margin: 2px 0; opacity: 0.8; }
-  .log p.cmd { color: #64b5f6; opacity: 1; }
-  .log p.done { color: #81c784; }
-  .log p.err { color: #e57373; }
+  .selection .label { color: var(--text-dim); font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 3px; }
+  .selection .node-info { display: flex; gap: 6px; flex-wrap: wrap; }
+  .selection .node-info .tag {
+    display: inline-block;
+    padding: 1px 6px;
+    background: rgba(124, 92, 252, 0.15);
+    border-radius: 3px;
+    font-size: 10px;
+    color: var(--accent);
+  }
+  .selection .node-info .tag .key { color: var(--text-dim); }
+
+  /* ── Chat section ── */
+  .chat-area {
+    padding: 8px 12px;
+    border-bottom: var(--border);
+  }
+  .chat-input-wrap {
+    display: flex;
+    gap: 6px;
+  }
+  .chat-input-wrap input {
+    flex: 1;
+    background: var(--surface);
+    border: var(--border);
+    border-radius: 6px;
+    padding: 7px 10px;
+    color: var(--text);
+    font-size: 12px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .chat-input-wrap input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 1px var(--accent-glow);
+  }
+  .chat-input-wrap input::placeholder { color: var(--text-dim); }
+  .chat-input-wrap button {
+    background: var(--accent);
+    border: none;
+    border-radius: 6px;
+    color: white;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 0 12px;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.1s;
+  }
+  .chat-input-wrap button:active { transform: scale(0.96); }
+  .chat-input-wrap button:hover { background: #8b6efc; }
+
+  /* ── Log ── */
+  .log-section {
+    padding: 8px 12px;
+  }
+  .log-section .label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-dim);
+    margin-bottom: 6px;
+  }
+  .log {
+    background: rgba(0,0,0,0.3);
+    border-radius: 6px;
+    padding: 8px;
+    max-height: 200px;
+    overflow-y: auto;
+    font-family: 'SF Mono', 'Fira Code', 'JetBrains Mono', 'Cascadia Code', monospace;
+    font-size: 10px;
+    line-height: 1.6;
+  }
+  .log::-webkit-scrollbar { width: 4px; }
+  .log::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+  .log p { margin: 1px 0; padding: 1px 4px; border-radius: 2px; }
+  .log p.cmd { color: #64b5f6; }
+  .log p.done { color: var(--green); }
+  .log p.err { color: var(--red); }
+  .log p.msg { color: var(--accent); font-style: italic; background: rgba(124,92,252,0.08); }
+  .log p.pending { color: #f0c040; }
 </style>
 </head>
 <body>
-  <div class="status">
+  <!-- Header -->
+  <div class="header">
     <div class="dot" id="dot"></div>
-    <span id="statusText">Disconnected</span>
+    <div class="info">
+      <div class="title">Craw Figma</div>
+      <div class="sub" id="statusText">Disconnected</div>
+    </div>
+    <span class="project-badge" id="projectBadge">📁 —</span>
   </div>
-  <div class="log" id="log"></div>
+
+  <!-- Selection -->
+  <div class="selection">
+    <div class="label">🎯 Selection</div>
+    <div class="node-info" id="selectionInfo">
+      <span style="color:var(--text-dim)">None</span>
+    </div>
+  </div>
+
+  <!-- Chat input -->
+  <div class="chat-area">
+    <div class="chat-input-wrap">
+      <input type="text" id="chatInput" placeholder="Cosa vuoi fare? es: 'crea un pulsante blu 200x60'" autofocus>
+      <button id="sendBtn">→</button>
+    </div>
+  </div>
+
+  <!-- Log -->
+  <div class="log-section">
+    <div class="label">Activity</div>
+    <div class="log" id="log"></div>
+  </div>
+
   <script>
     var dot = document.getElementById('dot');
     var statusText = document.getElementById('statusText');
     var logEl = document.getElementById('log');
-    var healthInterval = null;
+    var projectBadge = document.getElementById('projectBadge');
+    var selectionInfo = document.getElementById('selectionInfo');
+    var chatInput = document.getElementById('chatInput');
+    var sendBtn = document.getElementById('sendBtn');
 
-    function addLog(msg, cls) {
+    var CONNECTOR = 'http://localhost:9199';
+
+    function addLog(text, cls) {
       var p = document.createElement('p');
       p.className = cls || '';
-      p.textContent = '> ' + msg;
+      p.textContent = text;
       logEl.appendChild(p);
       logEl.scrollTop = logEl.scrollHeight;
     }
@@ -63,58 +200,42 @@
       parent.postMessage({ pluginMessage: msg }, '*');
     }
 
-    function get(url, callback) {
+    function httpGet(url, cb) {
       var xhr = new XMLHttpRequest();
       xhr.open('GET', url, true);
       xhr.timeout = 5000;
-      xhr.onload = function() {
-        var data = null;
-        try { data = JSON.parse(xhr.responseText); } catch(e) {}
-        callback(null, data);
-      };
-      xhr.onerror = function(e) {
-        callback(e, null);
-      };
+      xhr.onload = function() { try { cb(null, JSON.parse(xhr.responseText)); } catch(e) { cb(null, null); } };
+      xhr.onerror = function(e) { cb(e, null); };
       xhr.send();
     }
 
-    function post(url, body, callback) {
+    function httpPost(url, body, cb) {
       var xhr = new XMLHttpRequest();
       xhr.open('POST', url, true);
       xhr.setRequestHeader('Content-Type', 'application/json');
       xhr.timeout = 5000;
-      xhr.onload = function() {
-        var data = null;
-        try { data = JSON.parse(xhr.responseText); } catch(e) {}
-        callback(null, data);
-      };
-      xhr.onerror = function(e) {
-        callback(e, null);
-      };
+      xhr.onload = function() { try { cb(null, JSON.parse(xhr.responseText)); } catch(e) { cb(null, null); } };
+      xhr.onerror = function(e) { cb(e, null); };
       xhr.send(body);
     }
 
-    function checkHealth() {
-      get('http://localhost:9199/health?t=' + Date.now(), function(err, data) {
-        if (err) {
-          sendToPlugin({ type: 'http-error', url: 'http://localhost:9199/health' });
-          return;
-        }
-        sendToPlugin({ type: 'http-response', url: 'http://localhost:9199/health', status: 200, responseData: data });
-        // Start continuous poll for commands once healthy
-        if (!window._pollStarted) {
-          window._pollStarted = true;
-          setInterval(function() {
-            get('http://localhost:9199/next-command?t=' + Date.now(), function(err, data) {
-              if (err) return;
-              sendToPlugin({ type: 'http-response', url: 'http://localhost:9199/next-command', status: 200, responseData: data });
-            });
-          }, 1500);
-        }
+    // ── Send a user message to queue ──
+    function sendUserMessage(text) {
+      var msg = {
+        type: 'user-message',
+        text: text,
+        page: '',
+        selection: '',
+        timestamp: Date.now()
+      };
+      addLog('📝 ' + text, 'msg');
+      httpPost(CONNECTOR + '/queue', JSON.stringify(msg), function(err, res) {
+        if (err) addLog('⚠️ Failed to queue message', 'err');
+        else addLog('⏳ In attesa di Craw...', 'pending');
       });
     }
 
-    // Handle messages from plugin code
+    // ── Command execution from plugin code responses ──
     window.addEventListener('message', function(event) {
       var msg = event.data.pluginMessage || event.data;
       if (!msg) return;
@@ -128,33 +249,99 @@
         addLog(msg.text, msg.level);
         return;
       }
-      if (msg.type === 'http-get') {
-        get(msg.url, function(err, data) {
-          if (err) {
-            sendToPlugin({ type: 'http-error', url: msg.url, error: 'Network error' });
-          } else {
-            sendToPlugin({ type: 'http-response', url: msg.url, status: 200, responseData: data });
-          }
-        });
+      if (msg.type === 'page-info') {
+        projectBadge.textContent = '📁 ' + msg.name;
         return;
       }
-      if (msg.type === 'http-post') {
-        post(msg.url, msg.body, function(err, data) {
-          if (err) {
-            sendToPlugin({ type: 'http-error', url: msg.url, error: 'Network error' });
-          } else {
-            sendToPlugin({ type: 'http-response', url: msg.url, status: 200, responseData: data });
+      if (msg.type === 'selection-update') {
+        if (msg.nodes && msg.nodes.length > 0) {
+          var html = '';
+          msg.nodes.forEach(function(n) {
+            html += '<span class="tag">' + n.name + ' <span class="key">' + n.type + '</span></span>';
+            if (n.width) html += '<span class="tag">' + Math.round(n.width) + '×' + Math.round(n.height) + '</span>';
+          });
+          selectionInfo.innerHTML = html;
+        } else {
+          selectionInfo.innerHTML = '<span style="color:var(--text-dim)">None</span>';
+        }
+        return;
+      }
+
+      // HTTP responses from plugin code (commands execution results)
+      if (msg.type === 'http-response') {
+        var data = msg.responseData;
+        if (!data) return;
+
+        if (msg.url.indexOf('/next-command') !== -1) {
+          if (data && data.command) {
+            sendToPlugin({ type: 'exec-command', command: data });
           }
-        });
+        } else if (msg.url.indexOf('/health') !== -1) {
+          sendToPlugin({ type: 'http-response', url: msg.url, status: 200, responseData: data });
+        }
+        return;
+      }
+      if (msg.type === 'http-error') {
+        if (msg.url.indexOf('/health') !== -1) {
+          sendToPlugin({ type: 'http-error', url: msg.url });
+        }
         return;
       }
     });
 
-    // Initial ready signal
-    sendToPlugin({ type: 'ready' });
-    addLog('Craw Figma Connector ready');
+    // ── Chat input handlers ──
+    chatInput.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter' && chatInput.value.trim()) {
+        sendUserMessage(chatInput.value.trim());
+        chatInput.value = '';
+      }
+    });
+    sendBtn.addEventListener('click', function() {
+      if (chatInput.value.trim()) {
+        sendUserMessage(chatInput.value.trim());
+        chatInput.value = '';
+      }
+    });
 
-    // Start health checks
+    // ── Poll for queue responses ──
+    setInterval(function() {
+      httpGet(CONNECTOR + '/queue-responses?t=' + Date.now(), function(err, data) {
+        if (err) return;
+        if (!data || !data.responses) return;
+        data.responses.forEach(function(r) {
+          if (r.status === 'ok') {
+            addLog('✅ ' + (r.result ? (r.result.name || JSON.stringify(r.result).slice(0, 60)) : 'done'), 'done');
+          } else if (r.status === 'processing') {
+            addLog('⚙️ Craw is working...', 'pending');
+          } else if (r.status === 'error') {
+            addLog('❌ ' + (r.error || 'error'), 'err');
+          }
+        });
+      });
+    }, 2000);
+
+    // ── Health check and poll for commands from plugin ──
+    function checkHealth() {
+      httpGet(CONNECTOR + '/health?t=' + Date.now(), function(err, data) {
+        if (err) {
+          sendToPlugin({ type: 'http-error', url: CONNECTOR + '/health' });
+          return;
+        }
+        sendToPlugin({ type: 'http-response', url: CONNECTOR + '/health', status: 200, responseData: data });
+        if (!window._pollStarted) {
+          window._pollStarted = true;
+          setInterval(function() {
+            httpGet(CONNECTOR + '/next-command?t=' + Date.now(), function(err, data) {
+              if (err) return;
+              sendToPlugin({ type: 'http-response', url: CONNECTOR + '/next-command', status: 200, responseData: data });
+            });
+          }, 1500);
+        }
+      });
+    }
+
+    sendToPlugin({ type: 'ready' });
+    addLog('🦀 Craw Figma Connector ready', '');
     setTimeout(checkHealth, 300);
   </script>
 </body>
