@@ -1,5 +1,10 @@
 /// Craw Figma Connector — Plugin Code (ES5)
-/// Receives commands from UI via postMessage, executes Figma API, sends results back
+/// Connects to the local WebSocket bridge, receives commands, executes Figma API
+
+var ws = null;
+var WS_URL = "ws://localhost:9199";
+var PLUGIN_ID = "craw-figma-plugin";
+var reconnectTimer = null;
 
 function postUI(type, data) {
   data = data || {};
@@ -33,7 +38,6 @@ var commands = {
       return { id: rect.id, name: rect.name, x: rect.x, y: rect.y, width: rect.width, height: rect.height };
     });
   },
-
   createFrame: function(p) {
     return figma.loadFontAsync({ family: "Inter", style: "Regular" }).then(function() {
       var frame = figma.createFrame();
@@ -47,7 +51,6 @@ var commands = {
       return { id: frame.id, name: frame.name };
     });
   },
-
   createEllipse: function(p) {
     return figma.loadFontAsync({ family: "Inter", style: "Regular" }).then(function() {
       var ell = figma.createEllipse();
@@ -61,7 +64,6 @@ var commands = {
       return { id: ell.id, name: ell.name };
     });
   },
-
   createText: function(p) {
     return figma.loadFontAsync({ family: "Inter", style: "Regular" }).then(function() {
       var text = figma.createText();
@@ -77,19 +79,10 @@ var commands = {
       return { id: text.id, name: text.name };
     });
   },
-
   selectNode: function(p) {
-    if (p.id) {
-      var node = figma.getNodeById(p.id);
-      if (node) {
-        figma.currentPage.selection = [node];
-        figma.viewport.scrollAndZoomIntoView([node]);
-        return { found: true };
-      }
-    }
+    if (p.id) { var node = figma.getNodeById(p.id); if (node) { figma.currentPage.selection = [node]; figma.viewport.scrollAndZoomIntoView([node]); return { found: true }; } }
     return { found: false };
   },
-
   updateNode: function(p) {
     var node = figma.getNodeById(p.id);
     if (!node) throw new Error("Node not found: " + p.id);
@@ -101,89 +94,72 @@ var commands = {
     if (p.name) node.name = p.name;
     return { id: node.id, name: node.name, updated: true };
   },
-
   deleteNode: function(p) {
-    if (p.id) {
-      var node = figma.getNodeById(p.id);
-      if (node) { node.remove(); return { deleted: true, id: p.id }; }
-    }
+    if (p.id) { var node = figma.getNodeById(p.id); if (node) { node.remove(); return { deleted: true, id: p.id }; } }
     return { deleted: false };
   },
-
   getSelection: function() {
-    return figma.currentPage.selection.map(function(n) {
-      return { id: n.id, name: n.name, type: n.type, x: n.x, y: n.y, width: n.width, height: n.height };
-    });
+    return figma.currentPage.selection.map(function(n) { return { id: n.id, name: n.name, type: n.type, x: n.x, y: n.y, width: n.width, height: n.height }; });
   },
-
   getPageInfo: function() {
     return { name: figma.currentPage.name, id: figma.currentPage.id, childCount: figma.currentPage.children.length };
   },
-
   setFillColor: function(p) {
-    var node = figma.getNodeById(p.id);
-    if (!node || !hasFills(node)) throw new Error("Node not found or no fills");
-    node.fills = [{ type: "SOLID", color: p.color, opacity: p.opacity || 1 }];
-    return { id: node.id, fillSet: true };
+    var node = figma.getNodeById(p.id); if (!node || !hasFills(node)) throw new Error("Node not found or no fills");
+    node.fills = [{ type: "SOLID", color: p.color, opacity: p.opacity || 1 }]; return { id: node.id, fillSet: true };
   },
-
   groupSelection: function() {
-    var sel = figma.currentPage.selection;
-    if (sel.length < 2) throw new Error("Select at least 2 nodes");
-    var group = figma.group(sel, figma.currentPage);
-    return { id: group.id, name: group.name };
+    var sel = figma.currentPage.selection; if (sel.length < 2) throw new Error("Select at least 2 nodes");
+    var group = figma.group(sel, figma.currentPage); return { id: group.id, name: group.name };
   }
 };
 
-function sendResultToUI(commandId, status, data) {
-  postUI("command-result", {
-    commandId: commandId,
-    status: status,
-    data: status === "ok" ? data : { error: data }
-  });
+function connect() {
+  if (ws && ws.readyState === WebSocket.OPEN) return;
+  try { ws = new WebSocket(WS_URL); } catch(e) { scheduleReconnect(); return; }
+  ws.onopen = function() {
+    postUI("status", { connected: true });
+    postUI("log", { text: "Connected to Craw", level: "" });
+    startPeriodicUpdates();
+  };
+  ws.onmessage = function(event) {
+    var msg;
+    try { msg = JSON.parse(event.data); } catch(e) { return; }
+    var command = msg.command, payload = msg.payload || {};
+    postUI("log", { text: "Exec: " + command, level: "cmd" });
+    var handler = commands[command];
+    if (!handler) {
+      postUI("log", { text: "Unknown: " + command, level: "err" });
+      return;
+    }
+    try {
+      var result = handler(payload);
+      if (result && typeof result.then === "function") {
+        result.then(
+          function(res) { postUI("log", { text: "Done: " + (res.name || res.id || JSON.stringify(res).slice(0, 80)), level: "done" }); },
+          function(err) { postUI("log", { text: "Error: " + (err.message || String(err)), level: "err" }); }
+        );
+      } else {
+        postUI("log", { text: "Done: " + JSON.stringify(result).slice(0, 80), level: "done" });
+      }
+    } catch(err) {
+      postUI("log", { text: "Error: " + (err.message || String(err)), level: "err" });
+    }
+  };
+  ws.onclose = function() { postUI("status", { connected: false }); ws = null; scheduleReconnect(); };
+  ws.onerror = function() { if (ws) ws.close(); };
 }
 
-function executeCommand(cmd) {
-  if (!cmd || !cmd.command) { postUI("log", { text: "Invalid command", level: "err" }); return; }
-  postUI("log", { text: "Exec: " + cmd.command, level: "cmd" });
-  var handler = commands[cmd.command];
-  if (!handler) {
-    postUI("log", { text: "Unknown: " + cmd.command, level: "err" });
-    if (cmd.id) sendResultToUI(cmd.id, "error", "Unknown command: " + cmd.command);
-    return;
-  }
-  try {
-    var result = handler(cmd.payload || {});
-    if (result && typeof result.then === "function") {
-      result.then(
-        function(res) {
-          postUI("log", { text: "Done: " + (res.name || res.id || JSON.stringify(res).slice(0, 80)), level: "done" });
-          if (cmd.id) sendResultToUI(cmd.id, "ok", res);
-        },
-        function(err) {
-          postUI("log", { text: "Error: " + (err.message || String(err)), level: "err" });
-          if (cmd.id) sendResultToUI(cmd.id, "error", err.message || String(err));
-        }
-      );
-    } else {
-      postUI("log", { text: "Done: " + JSON.stringify(result).slice(0, 80), level: "done" });
-      if (cmd.id) sendResultToUI(cmd.id, "ok", result);
-    }
-  } catch(err) {
-    postUI("log", { text: "Error: " + (err.message || String(err)), level: "err" });
-    if (cmd.id) sendResultToUI(cmd.id, "error", err.message || String(err));
-  }
+function scheduleReconnect() {
+  if (reconnectTimer) return;
+  reconnectTimer = setTimeout(function() { reconnectTimer = null; connect(); }, 3000);
 }
 
 function startPeriodicUpdates() {
   setInterval(function() {
     try {
-      var page = figma.currentPage;
-      postUI("page-info", { name: page.name, id: page.id, childCount: page.children.length });
-      var sel = figma.currentPage.selection.map(function(n) {
-        return { id: n.id, name: n.name, type: n.type, x: n.x, y: n.y, width: n.width, height: n.height };
-      });
-      postUI("selection-update", { nodes: sel });
+      postUI("page-info", { name: figma.currentPage.name, id: figma.currentPage.id, childCount: figma.currentPage.children.length });
+      postUI("selection-update", { nodes: figma.currentPage.selection.map(function(n) { return { id: n.id, name: n.name, type: n.type, x: n.x, y: n.y, width: n.width, height: n.height }; }) });
     } catch(e) {}
   }, 1000);
 }
@@ -194,15 +170,6 @@ figma.skipInvisibleInstanceChildren = true;
 figma.ui.onmessage = function(msg) {
   if (msg.type === "ready") {
     postUI("log", { text: "Plugin loaded", level: "");
-    startPeriodicUpdates();
-    return;
-  }
-  if (msg.type === "exec-command") {
-    executeCommand(msg.command);
-    return;
-  }
-  if (msg.type === "update-page") {
-    postUI("page-info", { name: figma.currentPage.name, id: figma.currentPage.id, childCount: figma.currentPage.children.length });
-    return;
+    connect();
   }
 };

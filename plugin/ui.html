@@ -1,6 +1,8 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   :root {
@@ -15,30 +17,25 @@
     --border: 1px solid rgba(255,255,255,0.06);
   }
   body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; font-size: 12px; padding: 0; overflow-x: hidden; }
-
   .header { display: flex; align-items: center; gap: 8px; padding: 10px 12px; background: var(--surface); border-bottom: var(--border); }
-  .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--red); flex-shrink: 0; transition: background 0.3s, box-shadow 0.3s; }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--red); flex-shrink: 0; }
   .dot.connected { background: var(--green); box-shadow: 0 0 6px rgba(46,204,113,0.5); }
   .header .info { flex: 1; }
   .header .info .title { font-size: 12px; font-weight: 600; }
   .header .info .sub { font-size: 10px; color: var(--text-dim); margin-top: 1px; }
   .project-badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; background: var(--surface2); border-radius: 4px; font-size: 10px; color: var(--accent); border: 1px solid rgba(124,92,252,0.2); cursor: default; }
-
   .selection { padding: 8px 12px; background: var(--surface2); border-bottom: var(--border); font-size: 11px; min-height: 32px; }
   .selection .label { color: var(--text-dim); font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 3px; }
   .selection .node-info { display: flex; gap: 6px; flex-wrap: wrap; }
   .selection .node-info .tag { display: inline-block; padding: 1px 6px; background: rgba(124,92,252,0.15); border-radius: 3px; font-size: 10px; color: var(--accent); }
   .selection .node-info .none { color: var(--text-dim); }
-
   .chat-area { padding: 8px 12px; border-bottom: var(--border); }
   .chat-input-wrap { display: flex; gap: 6px; }
-  .chat-input-wrap input { flex: 1; background: var(--surface); border: var(--border); border-radius: 6px; padding: 7px 10px; color: var(--text); font-size: 12px; outline: none; transition: border-color 0.2s; }
+  .chat-input-wrap input { flex: 1; background: var(--surface); border: var(--border); border-radius: 6px; padding: 7px 10px; color: var(--text); font-size: 12px; outline: none; }
   .chat-input-wrap input:focus { border-color: var(--accent); box-shadow: 0 0 0 1px rgba(124,92,252,0.3); }
   .chat-input-wrap input::placeholder { color: var(--text-dim); }
-  .chat-input-wrap button { background: var(--accent); border: none; border-radius: 6px; color: white; font-size: 12px; font-weight: 600; padding: 0 14px; cursor: pointer; transition: background 0.2s, transform 0.1s; }
-  .chat-input-wrap button:active { transform: scale(0.96); }
+  .chat-input-wrap button { background: var(--accent); border: none; border-radius: 6px; color: white; font-size: 12px; font-weight: 600; padding: 0 14px; cursor: pointer; }
   .chat-input-wrap button:hover { background: #8b6efc; }
-
   .log-section { padding: 8px 12px; }
   .log-section .label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-dim); margin-bottom: 6px; }
   .log { background: rgba(0,0,0,0.3); border-radius: 6px; padding: 8px; max-height: 220px; overflow-y: auto; font-family: 'SF Mono', 'Fira Code', monospace; font-size: 10px; line-height: 1.6; }
@@ -67,7 +64,7 @@
   </div>
   <div class="chat-area">
     <div class="chat-input-wrap">
-      <input type="text" id="chatInput" placeholder="Cosa vuoi fare? es: 'crea un pulsante blu'" autofocus>
+      <input type="text" id="chatInput" placeholder="Cosa vuoi fare? es: 'crea rettangolo blu'" autofocus>
       <button id="sendBtn">→</button>
     </div>
   </div>
@@ -76,111 +73,50 @@
     <div class="log" id="log"></div>
   </div>
   <script>
-    var dot = document.getElementById('dot');
-    var statusText = document.getElementById('statusText');
-    var logEl = document.getElementById('log');
-    var projectBadge = document.getElementById('projectBadge');
-    var selectionInfo = document.getElementById('selectionInfo');
-    var chatInput = document.getElementById('chatInput');
-    var sendBtn = document.getElementById('sendBtn');
-    var CONNECTOR = 'http://localhost:9199';
-    var connected = false;
+    var dot = document.getElementById('dot'), statusText = document.getElementById('statusText');
+    var logEl = document.getElementById('log'), projectBadge = document.getElementById('projectBadge');
+    var selectionInfo = document.getElementById('selectionInfo'), chatInput = document.getElementById('chatInput'), sendBtn = document.getElementById('sendBtn');
+    var CONNECTOR = 'http://localhost:9200', connected = false;
 
-    function addLog(text, cls) {
-      var p = document.createElement('p');
-      p.className = cls || ''; p.textContent = text;
-      logEl.appendChild(p); logEl.scrollTop = logEl.scrollHeight;
-    }
-    function sendToPlugin(msg) { parent.postMessage({ pluginMessage: msg }, '*'); }
-    function get(url, cb) {
-      var xhr = new XMLHttpRequest();
-      xhr.open('GET', url, true); xhr.timeout = 5000;
-      xhr.onload = function() { try { cb(null, JSON.parse(xhr.responseText)); } catch(e) { cb(null, null); } };
-      xhr.onerror = function(e) { cb(e, null); };
-      xhr.send();
-    }
-    function post(url, body, cb) {
-      var xhr = new XMLHttpRequest();
-      xhr.open('POST', url, true); xhr.setRequestHeader('Content-Type', 'application/json'); xhr.timeout = 5000;
-      xhr.onload = function() { try { cb(null, JSON.parse(xhr.responseText)); } catch(e) { cb(null, null); } };
-      xhr.onerror = function(e) { cb(e, null); };
-      xhr.send(body);
-    }
+    function addLog(t, c) { var p = document.createElement('p'); p.className = c||''; p.textContent = t; logEl.appendChild(p); logEl.scrollTop = logEl.scrollHeight; }
+    function sendToPlugin(m) { parent.postMessage({ pluginMessage: m }, '*'); }
+    function get(url, cb) { var x = new XMLHttpRequest(); x.open('GET', url, true); x.timeout = 5000; x.onload = function() { try { cb(null, JSON.parse(x.responseText)); } catch(e) { cb(null, null); } }; x.onerror = function(e) { cb(e, null); }; x.send(); }
+    function post(url, b, cb) { var x = new XMLHttpRequest(); x.open('POST', url, true); x.setRequestHeader('Content-Type', 'application/json'); x.timeout = 5000; x.onload = function() { try { cb(null, JSON.parse(x.responseText)); } catch(e) { cb(null, null); } }; x.onerror = function(e) { cb(e, null); }; x.send(b); }
 
-    // Send user message to queue
     function sendUserMessage(text) {
-      addLog('📝 ' + text, 'msg');
-      post(CONNECTOR + '/queue', JSON.stringify({ type: 'user-message', text: text, timestamp: Date.now() }), function(err, res) {
-        if (err) addLog('⚠️ Failed to queue', 'err');
-        else addLog('⏳ Waiting for Craw...', 'pending');
+      addLog('\uD83D\uDCDD ' + text, 'msg');
+      post(CONNECTOR + '/queue', JSON.stringify({type:'user-message',text:text,timestamp:Date.now()}), function(err,res) {
+        if (err) addLog('\u26A0\uFE0F Failed to queue','err'); else addLog('\u23F3 Waiting for Craw...','pending');
       });
     }
 
-    // Poll for commands and push to plugin
-    function pollCommands() {
-      get(CONNECTOR + '/next-command?t=' + Date.now(), function(err, data) {
-        if (err) return;
-        if (data && data.command) {
-          sendToPlugin({ type: 'exec-command', command: data });
-        }
-      });
-    }
-
-    // Handle plugin messages
     window.addEventListener('message', function(event) {
       var msg = event.data.pluginMessage || event.data;
       if (!msg) return;
-
-      if (msg.type === 'page-info') {
-        projectBadge.textContent = '📁 ' + msg.name; return; }
+      if (msg.type === 'status') { dot.className = 'dot' + (msg.connected ? ' connected' : ''); statusText.textContent = msg.connected ? 'Connected to Craw' : 'Disconnected'; return; }
+      if (msg.type === 'page-info') { projectBadge.textContent = '\uD83D\uDCC1 ' + msg.name; return; }
       if (msg.type === 'selection-update') {
-        if (msg.nodes && msg.nodes.length > 0) {
-          var html = '';
-          msg.nodes.forEach(function(n) {
-            html += '<span class="tag">' + n.name + ' <span class="key" style="color:var(--text-dim)">' + n.type + '</span></span>';
-            if (n.width) html += '<span class="tag">' + Math.round(n.width) + '\u00D7' + Math.round(n.height) + '</span>';
-          });
-          selectionInfo.innerHTML = html;
-        } else { selectionInfo.innerHTML = '<span class="none">None</span>'; }
+        if (msg.nodes && msg.nodes.length>0) { var h=''; msg.nodes.forEach(function(n) { h+='<span class="tag">'+n.name+' <span style="color:var(--text-dim)">'+n.type+'</span></span>'; }); selectionInfo.innerHTML=h; }
+        else { selectionInfo.innerHTML='<span class="none">None</span>'; }
         return;
       }
-      if (msg.type === 'log') {
-        addLog(msg.text, msg.level); return;
-      }
-      // Command result from plugin code → POST to connector
-      if (msg.type === 'command-result') {
-        post(CONNECTOR + '/result', JSON.stringify({ id: msg.commandId, status: msg.status, data: msg.data }), function(err) {});
-        return;
-      }
+      if (msg.type === 'log') { addLog(msg.text, msg.level); return; }
     });
 
-    // Input
-    chatInput.addEventListener('keydown', function(e) {
-      if (e.key === 'Enter' && chatInput.value.trim()) { sendUserMessage(chatInput.value.trim()); chatInput.value = ''; }
-    });
-    sendBtn.addEventListener('click', function() {
-      if (chatInput.value.trim()) { sendUserMessage(chatInput.value.trim()); chatInput.value = ''; }
-    });
+    chatInput.addEventListener('keydown', function(e) { if (e.key==='Enter' && chatInput.value.trim()) { sendUserMessage(chatInput.value.trim()); chatInput.value=''; } });
+    sendBtn.addEventListener('click', function() { if (chatInput.value.trim()) { sendUserMessage(chatInput.value.trim()); chatInput.value=''; } });
 
-    // Health check
     function checkHealth() {
-      get(CONNECTOR + '/health?t=' + Date.now(), function(err, data) {
-        if (err) {
-          if (connected) { connected = false; dot.className = 'dot'; statusText.textContent = 'Disconnected'; }
-          return;
-        }
-        if (!connected) {
-          connected = true; dot.className = 'dot connected'; statusText.textContent = 'Connected to Craw';
-          addLog('🦀 Connected to Craw', '');
-        }
+      get(CONNECTOR+'/health?t='+Date.now(), function(err,data) {
+        if (err) { if (connected) { connected=false; } return; }
+        if (!connected) { connected=true; }
       });
     }
 
-    // Start
-    sendToPlugin({ type: 'ready' });
-    addLog('🦀 Craw ready', '');
-    setInterval(checkHealth, 3000); setTimeout(checkHealth, 300);
-    setInterval(pollCommands, 1500);
+    sendToPlugin({type:'ready'});
+    addLog('\uD83E\uDD80 Craw ready','');
+    setInterval(checkHealth, 3000);
+    setTimeout(checkHealth, 300);
   </script>
 </body>
 </html>
