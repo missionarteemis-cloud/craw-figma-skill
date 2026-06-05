@@ -193,8 +193,14 @@ function getShadowTokens(level) {
   });
 }
 
+function cleanColorObj(c) {
+  // Remove non-Figma fields like 'hex'
+  return { r: c.r, g: c.g, b: c.b };
+}
+
 function solidFill(color, opacity) {
-  return [{ type: "SOLID", color: resolveColor(color), opacity: opacity || 1 }];
+  var c = resolveColor(color);
+  return [{ type: "SOLID", color: cleanColorObj(c), opacity: opacity || 1 }];
 }
 
 // ── HTTP CLIENT TO CONNECTOR ──
@@ -291,6 +297,10 @@ builders.button = function(params) {
   var buttonH = fontSize + paddingV * 2;
   var buttonW = size + paddingH * 2;
   
+  // Extract first font family from CSS stack (remove quotes, fallbacks)
+  var fontFamilyRaw = getToken('typography.font-family.ui', 'Inter');
+  var fontFamily = fontFamilyRaw.split(',')[0].replace(/['"]/g, '').trim();
+  
   return [
     {
       command: "createRectangle",
@@ -313,7 +323,7 @@ builders.button = function(params) {
         y: y + paddingV,
         characters: label,
         fontSize: fontSize,
-        fontName: { family: getToken('typography.font-family.ui', 'Inter'), style: 'Medium' },
+        fontName: { family: fontFamily, style: 'Medium' },
         fills: solidFill('white', 1)
       }
     }
@@ -531,57 +541,74 @@ function parsePrompt(text) {
 }
 
 // ── CONSULT NOTEBOOKLM BEFORE DESIGN ──
-// Build a design context from NotebookLM knowledge before planning
+// Writes a query file that OpenClaw/Craw picks up via heartbeat
+// and answers via the NotebookLM MCP tool.
+// The answer is written back for the next run to consume.
 
 var cachedDesignAdvice = null;
+var NOTEBOOKLM_QUERY_DIR = '/tmp/craw_figma_notebooklm/';
 
 function getDesignAdvice(shapeName, color, style) {
   return new Promise(function(resolve) {
     if (cachedDesignAdvice) {
+      console.log("  📖 Using cached advice.");
       resolve(cachedDesignAdvice);
       return;
     }
     
-    var questions = [];
+    // Check if a previous answer file exists
+    try {
+      var answerFile = NOTEBOOKLM_QUERY_DIR + 'answer.json';
+      if (fs.existsSync(answerFile)) {
+        var answer = JSON.parse(fs.readFileSync(answerFile, 'utf-8'));
+        if (answer.advice) {
+          cachedDesignAdvice = answer.advice;
+          console.log("  📖 Using previous NotebookLM advice.");
+          resolve(cachedDesignAdvice);
+          return;
+        }
+      }
+    } catch(e) {}
     
-    // Build context-specific questions based on what we're designing
+    var category = 'proportions';
+    var question = '';
+    
     if (shapeName === 'heart') {
-      questions.push(
-        'Quali sono le proporzioni ideali per un cuore in icon design? ' +
+      category = 'shape_heart';
+      question = 'Quali sono le proporzioni ideali per un cuore in icon design? ' +
         'Un cuore iconico ha rapporto larghezza/altezza intorno a 0.85? ' +
-        'Quali sono le curve migliori per farlo sembrare professionale?'
-      );
+        'Le curve devono essere lisce con lobi arrotondati. Cosa dice Refactoring UI?';
     } else if (shapeName === 'star') {
-      questions.push(
-        'Quali proporzioni usa Refactoring UI per le icone a stella? ' +
-        'Un rapporto innerRadius ottimale per stelle a 5 punte è 0.38 o 0.4?'
-      );
+      category = 'shape_star';
+      question = 'Quali proporzioni usa Refactoring UI per le icone a stella? ' +
+        'Un rapporto innerRadius ottimale per stelle a 5 punte è 0.38 o 0.4?';
+    } else if (shapeName === 'button') {
+      category = 'ui_button';
+      question = 'Secondo Refactoring UI e Material Design 3, quali sono le proporzioni ' +
+        'e lo stile ideali per un bottone UI? Corner radius, padding, ombre, gradiente. ' +
+        'Per un colore ' + (color || 'blu') + ', che gradiente secondario scegliere?';
     }
     
-    // Always ask about color
-    if (color) {
-      questions.push(
-        'Secondo Material Design 3 e Refactoring UI, quali sono le migliori pratiche ' +
-        'per gradienti e ombre su elementi UI? ' +
-        'Come si sceglie un colore secondario per un gradiente partendo dal colore primario?'
-      );
+    if (question) {
+      try {
+        if (!fs.existsSync(NOTEBOOKLM_QUERY_DIR)) {
+          fs.mkdirSync(NOTEBOOKLM_QUERY_DIR, { recursive: true });
+        }
+        fs.writeFileSync(NOTEBOOKLM_QUERY_DIR + 'query.json', JSON.stringify({
+          question: question,
+          category: category,
+          shape: shapeName,
+          color: color,
+          style: style || null,
+          timestamp: Date.now()
+        }, null, 2));
+        console.log('  📝 NotebookLM: domanda salvata in ' + NOTEBOOKLM_QUERY_DIR + 'query.json');
+        console.log('     Craw risponderà nel prossimo ciclo.');
+      } catch(e) {
+        console.log('  ⚠️  Cannot write query: ' + e.message);
+      }
     }
     
-    if (style) {
-      questions.push(
-        'Descrivi brevemente come implementare un effetto ' + style + ' in Figma ' +
-        'usando gradienti, ombre e sfocature. Cosa dice Refactoring UI a riguardo?'
-      );
-    }
-    
-    // Try to call NotebookLM via MCP tool
-    // Since we can't directly call MCP from Node, we save the query to a file
-    // that the heartbeat or next interaction can process
-    var fs = require('fs');
-    var queryFile = '/tmp/craw_notebooklm_query.json';
-    
-    // Write query for later processing
-    // For now, return null - NotebookLM is consulted live via Craw during execution
     resolve(null);
   });
 }
