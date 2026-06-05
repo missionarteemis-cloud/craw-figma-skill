@@ -242,7 +242,10 @@ commands.createText = function(p) {
   if (p.fills && hasFills(text)) text.fills = p.fills;
   if (p.textAlignHorizontal) text.textAlignHorizontal = p.textAlignHorizontal;
   if (p.fontName) text.fontName = p.fontName;
-  if (p.letterSpacing) text.letterSpacing = p.letterSpacing;
+  if (p.letterSpacing) {
+    if (typeof p.letterSpacing === 'number') { text.letterSpacing = p.letterSpacing; }
+    else if (p.letterSpacing.value !== undefined) { text.letterSpacing = p.letterSpacing.value; }
+  }
   if (p.lineHeight) text.lineHeight = p.lineHeight;
   if (p.textAutoResize) text.textAutoResize = p.textAutoResize;
   figma.currentPage.appendChild(text);

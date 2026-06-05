@@ -1,6 +1,6 @@
 {
   "drs-lab": {
-    "$description": "DR's Lab — project-specific overrides for the Craw Design System.",
+    "$description": "DR's Lab — full project-specific design tokens. Matches the globals.css palette exactly.",
     "$extensions": {
       "craw-design-system": {
         "extends": "../design-tokens.json"
@@ -12,12 +12,12 @@
     "bg":          { "$value": "#0A0F18", "$type": "color", "$description": "Deep navy-black background" },
     "bg-surface":  { "$value": "#10151E", "$type": "color", "$description": "Card/surface background" },
     "border":      { "$value": "#1A2030", "$type": "color", "$description": "Subtle borders" },
-    "accent":      { "$value": "#247DFF", "$type": "color", "$description": "Primary accent blue" },
-    "accent-dim":  { "$value": "#1459CC", "$type": "color" },
-    "accent-glow": { "$value": "#247DFF26", "$type": "color", "$description": "Glow/backdrop accent" },
-    "green":       { "$value": "#3DBA6E", "$type": "color", "$description": "Success/positive" },
-    "text":        { "$value": "#E8EEF5", "$type": "color", "$description": "Primary text on dark" },
-    "text-muted":  { "$value": "#5A6478", "$type": "color", "$description": "Secondary text" }
+    "accent":      { "$value": "#247DFF", "$type": "color", "$description": "Primary accent blue (#247DFF)" },
+    "accent-dim":  { "$value": "#1459CC", "$type": "color", "$description": "Dimmed accent (#1459CC)" },
+    "accent-glow": { "$value": "#247DFF26", "$type": "color", "$description": "Glow/backdrop accent (rgba 36,125,255,0.15)" },
+    "green":       { "$value": "#3DBA6E", "$type": "color", "$description": "Success/positive (#3DBA6E)" },
+    "text":        { "$value": "#E8EEF5", "$type": "color", "$description": "Primary text on dark (#E8EEF5)" },
+    "text-muted":  { "$value": "#5A6478", "$type": "color", "$description": "Secondary/muted text (#5A6478)" }
   },
 
   "typography": {
@@ -26,10 +26,24 @@
       "heading":  { "$value": "'FreeFat', sans-serif", "$type": "fontFamily", "$description": "Bold emphatic headings" },
       "ui":       { "$value": "'LoRes9PlusOTNarrow', monospace", "$type": "fontFamily", "$description": "UI labels/retro text" },
       "mono":     { "$value": "'LoRes9PlusOTNarrow', monospace", "$type": "fontFamily" }
+    },
+    "figma": {
+      "$description": "Font families actually available in Figma (system fonts). Falls back when custom fonts aren't installed.",
+      "display":  { "$value": "Inter", "$type": "fontFamily", "$description": "Figma fallback for Saint (install Saint on macOS for real font)" },
+      "heading":  { "$value": "Inter", "$type": "fontFamily", "$description": "Figma fallback for FreeFat" },
+      "ui":       { "$value": "Inter", "$type": "fontFamily", "$description": "Figma fallback for LoRes9PlusOTNarrow" },
+      "mono":     { "$value": "JetBrains Mono", "$type": "fontFamily" }
     }
   },
 
   "spacing": {
     "section": { "$value": "80px", "$type": "dimension", "$description": "DR's Lab uses more breathing room" }
+  },
+
+  "effects": {
+    "$description": "DR's Lab specific effects.",
+    "glow": {
+      "accent": { "$value": "0 0 20px #247DFF26, 0 0 40px #247DFF26", "$type": "string", "$description": "Accent glow box-shadow" }
+    }
   }
 }

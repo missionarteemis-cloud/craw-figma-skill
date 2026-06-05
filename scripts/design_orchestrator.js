@@ -287,7 +287,10 @@ builders.button = function(params) {
   var size = params.size || 160;
   var x = params.x || 300;
   var y = params.y || 300;
-  var color = resolveColor(params.color || 'blue');
+  
+  // Use accent color from tokens when available, fallback to blue
+  var accentHex = getToken('color.accent.$value', null);
+  var accentColor = accentHex ? resolveColor(accentHex) : resolveColor(params.color || 'blue');
   
   // Tokens-driven values
   var borderRadius = parseInt(getToken('border-radius.md', '8'));
@@ -297,9 +300,12 @@ builders.button = function(params) {
   var buttonH = fontSize + paddingV * 2;
   var buttonW = size + paddingH * 2;
   
-  // Extract first font family from CSS stack (remove quotes, fallbacks)
-  var fontFamilyRaw = getToken('typography.font-family.ui', 'Inter');
+  // Figma-compatible font: prefer typography.figma.* for Figma, fallback to typography.font-family.*
+  var fontFamilyRaw = getToken('typography.figma.ui', null) || getToken('typography.font-family.ui', 'Inter');
   var fontFamily = fontFamilyRaw.split(',')[0].replace(/['"]/g, '').trim();
+  
+  var fillsAccent = [{ type: "SOLID", color: cleanColorObj(accentColor), opacity: 1 }];
+  var fillsWhite = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 }, opacity: 1 }];
   
   return [
     {
@@ -310,7 +316,7 @@ builders.button = function(params) {
         width: buttonW,
         height: buttonH,
         cornerRadius: borderRadius,
-        fills: solidFill(color, 1),
+        fills: fillsAccent,
         effects: getShadowTokens('low'),
         strokes: []
       }
@@ -321,10 +327,11 @@ builders.button = function(params) {
         name: "Label",
         x: x + paddingH,
         y: y + paddingV,
-        characters: label,
+        characters: label.toUpperCase(),
         fontSize: fontSize,
         fontName: { family: fontFamily, style: 'Medium' },
-        fills: solidFill('white', 1)
+        fills: fillsWhite,
+        letterSpacing: { value: 0.08, unit: 'PERCENT' }
       }
     }
   ];
