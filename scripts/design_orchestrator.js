@@ -305,7 +305,7 @@ builders.button = function(params) {
   // Tokens-driven values
   var borderRadius = parseInt(getToken('border-radius.md', '8'));
   var paddingH = parseInt(getToken('spacing.md', '16'));
-  var paddingV = parseInt(getToken('spacing.sm', '8'));
+  var paddingV = parseInt(getToken('spacing.sm', '10'));  // NotebookLM: modulare 4dp, genera spaziatura
   var fontSize = parseInt(getToken('typography.size.sm', '14'));
   var buttonH = fontSize + paddingV * 2;
   var buttonW = size + paddingH * 2;
