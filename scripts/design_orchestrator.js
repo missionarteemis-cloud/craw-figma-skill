@@ -287,10 +287,20 @@ builders.button = function(params) {
   var size = params.size || 160;
   var x = params.x || 300;
   var y = params.y || 300;
+  var style = params.buttonStyle || 'filled'; // 'filled', 'outlined', 'ghost'
   
-  // Use accent color from tokens when available, fallback to blue
+  // Colors from tokens
+  var bgHex = getToken('color.bg.$value', null);
   var accentHex = getToken('color.accent.$value', null);
-  var accentColor = accentHex ? resolveColor(accentHex) : resolveColor(params.color || 'blue');
+  var textHex = getToken('color.text.$value', null);
+  var mutedHex = getToken('color.text-muted.$value', null);
+  var borderHex = getToken('color.border.$value', null);
+  
+  var bgColor = bgHex ? resolveColor(bgHex) : { r: 0.04, g: 0.06, b: 0.09 };
+  var accentColor = accentHex ? resolveColor(accentHex) : { r: 0.14, g: 0.49, b: 1.0 };
+  var textColor = textHex ? resolveColor(textHex) : { r: 0.91, g: 0.93, b: 0.96 };
+  var mutedColor = mutedHex ? resolveColor(mutedHex) : { r: 0.35, g: 0.39, b: 0.47 };
+  var borderColor = borderHex ? resolveColor(borderHex) : { r: 0.10, g: 0.13, b: 0.19 };
   
   // Tokens-driven values
   var borderRadius = parseInt(getToken('border-radius.md', '8'));
@@ -300,41 +310,78 @@ builders.button = function(params) {
   var buttonH = fontSize + paddingV * 2;
   var buttonW = size + paddingH * 2;
   
-  // Figma-compatible font: prefer typography.figma.* for Figma, fallback to typography.font-family.*
+  // Figma-compatible font
   var fontFamilyRaw = getToken('typography.figma.ui', null) || getToken('typography.font-family.ui', 'Inter');
   var fontFamily = fontFamilyRaw.split(',')[0].replace(/['"]/g, '').trim();
   
-  var fillsAccent = [{ type: "SOLID", color: cleanColorObj(accentColor), opacity: 1 }];
-  var fillsWhite = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 }, opacity: 1 }];
+  // Clean fills
+  function makeFill(color) {
+    return [{ type: "SOLID", color: cleanColorObj(color), opacity: 1 }];
+  }
   
-  return [
-    {
-      command: "createRectangle",
-      payload: {
-        name: "Button",
-        x: x, y: y,
-        width: buttonW,
-        height: buttonH,
-        cornerRadius: borderRadius,
-        fills: fillsAccent,
-        effects: getShadowTokens('low'),
-        strokes: []
+  // Button style
+  if (style === 'outlined') {
+    // Dark bg + accent border
+    return [
+      {
+        command: "createRectangle",
+        payload: {
+          name: "Button",
+          x: x, y: y,
+          width: buttonW,
+          height: buttonH,
+          cornerRadius: borderRadius,
+          fills: makeFill(bgColor),
+          strokes: [{ type: "SOLID", color: cleanColorObj(accentColor), opacity: 1 }],
+          strokeWeight: 1.5,
+          effects: getShadowTokens('low'),
+        }
+      },
+      {
+        command: "createText",
+        payload: {
+          name: "Label",
+          x: x + paddingH,
+          y: y + paddingV,
+          characters: label.toUpperCase(),
+          fontSize: fontSize,
+          fontName: { family: fontFamily, style: 'Regular' },
+          fills: makeFill(accentColor),
+          letterSpacing: { value: 0.08, unit: 'PERCENT' }
+        }
       }
-    },
-    {
-      command: "createText",
-      payload: {
-        name: "Label",
-        x: x + paddingH,
-        y: y + paddingV,
-        characters: label.toUpperCase(),
-        fontSize: fontSize,
-        fontName: { family: fontFamily, style: 'Regular' },
-        fills: fillsWhite,
-        letterSpacing: { value: 0.08, unit: 'PERCENT' }
+    ];
+  } else {
+    // Filled: accent bg + white text (default)
+    return [
+      {
+        command: "createRectangle",
+        payload: {
+          name: "Button",
+          x: x, y: y,
+          width: buttonW,
+          height: buttonH,
+          cornerRadius: borderRadius,
+          fills: makeFill(accentColor),
+          effects: getShadowTokens('low'),
+          strokes: []
+        }
+      },
+      {
+        command: "createText",
+        payload: {
+          name: "Label",
+          x: x + paddingH,
+          y: y + paddingV,
+          characters: label.toUpperCase(),
+          fontSize: fontSize,
+          fontName: { family: fontFamily, style: 'Regular' },
+          fills: makeFill({ r: 1, g: 1, b: 1 }),
+          letterSpacing: { value: 0.08, unit: 'PERCENT' }
+        }
       }
-    }
-  ];
+    ];
+  }
 };
 
 // ── ORCHESTRATOR ──
@@ -530,6 +577,11 @@ function parsePrompt(text) {
   if (text.includes('alta ombr') || text.includes('high shadow')) params.shadowLevel = 'high';
   else if (params.shadow) params.shadowLevel = 'medium';
   else params.shadowLevel = 'low';
+  
+  // Button style: outlined (bordo) vs filled (default)
+  if (text.includes('bordo') || text.includes('contorn') || text.includes('outline')) {
+    params.buttonStyle = 'outlined';
+  }
   
   // Button label
   if (params.shape === 'button') {
