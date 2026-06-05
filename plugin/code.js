@@ -152,7 +152,7 @@ commands.createVector = function(p) {
   if (p.strokeWeight) vector.strokeWeight = p.strokeWeight;
   if (p.effects && hasEffects(vector)) vector.effects = p.effects;
   if (p.name) vector.name = p.name;
-  // Build vector network
+  // Build vector network — no regions, let Figma auto-close if p.closed
   if (p.vertices && p.segments) {
     var vtx = [];
     for (var i = 0; i < p.vertices.length; i++) {
@@ -167,14 +167,19 @@ commands.createVector = function(p) {
       if (s.tangentEnd) seg.tangentEnd = s.tangentEnd;
       segs.push(seg);
     }
-    vector.vectorNetwork = { vertices: vtx, segments: segs, regions: p.regions || [] };
-  }
-  // If closed, set regions on the network directly
-  if (p.closed && vector.vectorNetwork) {
-    var net = vector.vectorNetwork;
-    if (!net.regions || net.regions.length === 0) {
-      net.regions = [{ windingRule: "EVENODD", loops: [net.segments.map(function(s, idx) { return idx; })] }];
+    // Build network without regions (regions is read-only after assignment)
+    var network = { vertices: vtx, segments: segs };
+    if (p.closed) {
+      // Build regions array before assigning
+      var regionLoops = [];
+      var loop = [];
+      for (var k = 0; k < segs.length; k++) {
+        loop.push(k);
+      }
+      regionLoops.push({ windingRule: "EVENODD", loops: [loop] });
+      network.regions = regionLoops;
     }
+    vector.vectorNetwork = network;
   }
   figma.currentPage.appendChild(vector);
   var result = {};
