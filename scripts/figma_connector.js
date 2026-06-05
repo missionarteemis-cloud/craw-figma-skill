@@ -1,95 +1,142 @@
 #!/usr/bin/env node
 
 /**
- * Craw Figma Connector
+ * Craw Figma Connector (HTTP polling mode)
  *
- * WebSocket server locale (ws://localhost:9199).
- * Il plugin Figma si connette a questo server.
- * Craw (via skill script) scrive comandi su questo canale.
+ * Ascolta su due porte:
+ * - :9199  HTTP: il plugin Figma fa poll qui per nuovi comandi e POST risultati
+ * - :9200  HTTP: health check
  *
  * Uso:
  *   node figma_connector.js
- *
- * Opzioni:
- *   --port 9199    Porta del WebSocket (default 9199)
+ *   node figma_connector.js --port 9199
  */
 
-const { WebSocketServer } = require("ws");
-const http = require("http");
+var http = require("http");
+var url = require("url");
 
-const PORT = parseInt(process.argv.find(a => a.startsWith("--port="))?.split("=")[1] || process.argv[process.argv.indexOf("--port") + 1] || "9199", 10);
+var PORT = 9199;
+var args = process.argv.slice(2);
+for (var i = 0; i < args.length; i++) {
+  if (args[i] === "--port" && i + 1 < args.length) { PORT = parseInt(args[i + 1], 10); break; }
+  if (args[i].startsWith("--port=")) { PORT = parseInt(args[i].split("=")[1], 10); break; }
+}
+if (isNaN(PORT) || PORT < 1 || PORT > 65535) PORT = 9199;
 
-// Coda di messaggi: quando il plugin non è connesso, i comandi si accumulano
-// e vengono inviati appena il plugin si riconnette
-let pluginSocket = null;
-const pendingQueue = [];
+// Coda comandi: Craw scrive qui, plugin fa poll e prende
+var commandQueue = [];
+// Risultati: plugin POST qui, Craw aspetta
+var resultStore = {};
+// Callback per attese
+var pendingCallbacks = {};
 
-const wss = new WebSocketServer({ port: PORT });
+// ── HTTP Server (polling endpoint) ──────────────────────────────────
+var server = http.createServer(function(req, res) {
+  var parsed = url.parse(req.url, true);
+  var path = parsed.pathname;
 
-wss.on("connection", (ws, req) => {
-  // Identifica se è il plugin o Craw
-  const ua = req.headers["user-agent"] || "";
-  const isPlugin = ua.includes("Figma") || !req.headers["origin"] || req.headers["origin"].includes("figma");
+  // CORS headers per richieste dal plugin
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
-  if (isPlugin) {
-    console.log(`[${new Date().toISOString()}] Plugin connected`);
-    pluginSocket = ws;
+  if (req.method === "OPTIONS") {
+    res.writeHead(204);
+    res.end();
+    return;
+  }
 
-    // Invia tutti i comandi in attesa
-    while (pendingQueue.length > 0) {
-      const msg = pendingQueue.shift();
-      try { ws.send(JSON.stringify(msg)); } catch {}
+  if (path === "/next-command") {
+    // Plugin fa poll per nuovi comandi
+    var cmd = commandQueue.shift() || null;
+    if (cmd) {
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify(cmd));
+    } else {
+      res.writeHead(204);
+      res.end();
     }
 
-    ws.on("close", () => {
-      console.log(`[${new Date().toISOString()}] Plugin disconnected`);
-      pluginSocket = null;
+  } else if (path === "/result") {
+    // Plugin POST risultati
+    var body = "";
+    req.on("data", function(chunk) { body += chunk; });
+    req.on("end", function() {
+      try {
+        var result = JSON.parse(body);
+        resultStore[result.id] = result;
+        // Se c'è un pending callback per questo ID, lo risolviamo
+        if (pendingCallbacks[result.id]) {
+          pendingCallbacks[result.id](result);
+          delete pendingCallbacks[result.id];
+        }
+      } catch(e) {}
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ ok: true }));
     });
 
-    ws.on("message", (data) => {
-      // Risposta del plugin → la inoltriamo a Craw via stdin/stdout
-      const msg = data.toString();
-      // Il chiamante (script skill) ascolta su stdout
-      process.stdout.write(msg + "\n");
-    });
+  } else if (path === "/health") {
+    res.writeHead(200, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({
+      status: "ok",
+      pendingCommands: commandQueue.length,
+      pendingResults: Object.keys(pendingCallbacks).length
+    }));
 
-  } else {
-    // Connessione da Craw / script — probabilmente un messaggio one-shot
-    console.log(`[${new Date().toISOString()}] Client connected (likely Craw)`);
+  } else if (path === "/send-command") {
+    // Craw invia un comando (via figma_send.js)
+    var body = "";
+    req.on("data", function(chunk) { body += chunk; });
+    req.on("end", function() {
+      try {
+        var cmd = JSON.parse(body);
+        var id = cmd.id;
+        commandQueue.push(cmd);
 
-    ws.on("message", (data) => {
-      const msg = data.toString();
-      if (pluginSocket && pluginSocket.readyState === ws.OPEN) {
-        pluginSocket.send(msg);
-      } else {
-        pendingQueue.push(JSON.parse(msg));
+        // Aspetta il risultato (polling reply)
+        var timeout = setTimeout(function() {
+          delete pendingCallbacks[id];
+          res.writeHead(200, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ id: id, status: "timeout", data: null }));
+        }, 15000);
+
+        pendingCallbacks[id] = function(result) {
+          clearTimeout(timeout);
+          res.writeHead(200, { "Content-Type": "application/json" });
+          res.end(JSON.stringify(result));
+        };
+
+        // Se il risultato arriva prima che il plugin lo legga…
+        // (caso raro ma gestito)
+        if (resultStore[id]) {
+          var r = resultStore[id];
+          if (pendingCallbacks[id]) {
+            pendingCallbacks[id](r);
+            delete pendingCallbacks[id];
+          }
+          delete resultStore[id];
+        }
+      } catch(e) {
+        res.writeHead(400, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: "Invalid JSON" }));
       }
     });
 
-    ws.on("close", () => {});
+  } else {
+    res.writeHead(404);
+    res.end("Not found");
   }
 });
 
-// HTTP health check
-const server = http.createServer((req, res) => {
-  res.writeHead(200, { "Content-Type": "application/json" });
-  res.end(JSON.stringify({
-    status: "ok",
-    pluginConnected: pluginSocket?.readyState === WebSocket.OPEN,
-    pendingCommands: pendingQueue.length,
-  }));
-});
-server.listen(PORT + 1, () => {
-  console.log(`[${new Date().toISOString()}] HTTP health check on :${PORT + 1}`);
+server.listen(PORT, function() {
+  var d = new Date().toISOString();
+  console.log("[" + d + "] Craw Figma Connector (HTTP) listening on http://localhost:" + PORT);
+  console.log("[" + d + "] Waiting for plugin...");
 });
 
-console.log(`[${new Date().toISOString()}] Craw Figma Connector listening on ws://localhost:${PORT}`);
-console.log(`[${new Date().toISOString()}] Plugin status: waiting for connection...`);
-
-// Graceful shutdown
-process.on("SIGINT", () => {
-  console.log(`[${new Date().toISOString()}] Shutting down...`);
-  wss.close();
+process.on("SIGINT", function() {
+  var d = new Date().toISOString();
+  console.log("[" + d + "] Shutting down...");
   server.close();
   process.exit(0);
 });

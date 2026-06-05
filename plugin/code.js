@@ -1,9 +1,8 @@
-/// Craw Figma Connector — Plugin Code (ES5)
-/// WebSocket connection to local ws://localhost:9199
+/// Craw Figma Connector — Plugin Code (ES5, HTTP polling instead of WebSocket)
+/// Polls the local connector at http://localhost:9199 for commands
 
-var ws = null;
-var reconnectTimer = null;
-var WS_URL = "ws://localhost:9199";
+var pollInterval = null;
+var POLL_URL = "http://localhost:9199";
 
 function postUI(type, data) {
   data = data || {};
@@ -147,68 +146,84 @@ var commands = {
   }
 };
 
-function connect() {
-  if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) return;
-  try {
-    ws = new WebSocket(WS_URL);
-  } catch (e) {
-    postUI("status", { connected: false });
-    scheduleReconnect();
-    return;
-  }
-  ws.onopen = function() {
-    postUI("status", { connected: true });
-    postUI("log", { text: "Connected to Craw connector", level: "" });
-  };
-  ws.onmessage = function(event) {
-    var msg;
-    try { msg = JSON.parse(event.data); } catch(e) { return; }
-    var id = msg.id, command = msg.command, payload = msg.payload || {};
-    postUI("log", { text: "Exec: " + command, level: "cmd" });
-    var handler = commands[command];
-    if (!handler) {
-      ws.send(JSON.stringify({ id: id, status: "error", error: "Unknown command: " + command }));
-      postUI("log", { text: "Error: Unknown command " + command, level: "err" });
-      return;
-    }
-    try {
-      var result = handler(payload);
-      // Handle both sync and thenable returns
-      if (result && typeof result.then === "function") {
-        result.then(function(res) {
-          ws.send(JSON.stringify({ id: id, status: "ok", result: res }));
-          postUI("log", { text: "Done: " + command, level: "done" });
-        }, function(err) {
-          ws.send(JSON.stringify({ id: id, status: "error", error: err.message || String(err) }));
-          postUI("log", { text: "Error: " + command + " — " + (err.message || String(err)), level: "err" });
-        });
-      } else {
-        ws.send(JSON.stringify({ id: id, status: "ok", result: result }));
-        postUI("log", { text: "Done: " + command, level: "done" });
+// Poll for commands from the HTTP endpoint
+function pollForCommands() {
+  var xhr = new XMLHttpRequest();
+  xhr.open("GET", POLL_URL + "/next-command?t=" + Date.now(), true);
+  xhr.timeout = 5000;
+  xhr.onload = function() {
+    if (xhr.status === 200) {
+      try {
+        var cmd = JSON.parse(xhr.responseText);
+        executeCommand(cmd);
+      } catch(e) {
+        // empty or invalid response
       }
-    } catch(err) {
-      ws.send(JSON.stringify({ id: id, status: "error", error: err.message || String(err) }));
-      postUI("log", { text: "Error: " + command + " — " + (err.message || String(err)), level: "err" });
     }
+    // poll again after delay
   };
-  ws.onclose = function() {
-    postUI("status", { connected: false });
-    postUI("log", { text: "Disconnected", level: "err" });
-    ws = null;
-    scheduleReconnect();
+  xhr.onerror = function() {
+    // connection refused — connector not running
   };
-  ws.onerror = function() {
-    postUI("status", { connected: false });
-    if (ws) ws.close();
-  };
+  xhr.send();
 }
 
-function scheduleReconnect() {
-  if (reconnectTimer) return;
-  reconnectTimer = setTimeout(function() {
-    reconnectTimer = null;
-    connect();
-  }, 3000);
+function executeCommand(cmd) {
+  if (!cmd || !cmd.command) return;
+  postUI("log", { text: "Exec: " + cmd.command, level: "cmd" });
+  var handler = commands[cmd.command];
+  if (!handler) {
+    sendResult(cmd.id, "error", "Unknown command: " + cmd.command);
+    return;
+  }
+  try {
+    var result = handler(cmd.payload || {});
+    if (result && typeof result.then === "function") {
+      result.then(function(res) { sendResult(cmd.id, "ok", res); }, function(err) { sendResult(cmd.id, "error", err.message || String(err)); });
+    } else {
+      sendResult(cmd.id, "ok", result);
+    }
+  } catch(err) {
+    sendResult(cmd.id, "error", err.message || String(err));
+  }
+}
+
+function sendResult(id, status, data) {
+  var xhr = new XMLHttpRequest();
+  xhr.open("POST", POLL_URL + "/result", true);
+  xhr.setRequestHeader("Content-Type", "application/json");
+  var body = JSON.stringify({ id: id, status: status, data: status === "ok" ? data : { error: data } });
+  xhr.send(body);
+  if (status === "ok") {
+    postUI("log", { text: "Done: " + (data && data.name ? data.name : ""), level: "done" });
+  } else {
+    postUI("log", { text: "Error: " + data, level: "err" });
+  }
+}
+
+function startPolling() {
+  postUI("status", { connected: true });
+  postUI("log", { text: "Connected (HTTP polling mode)", level: "" });
+  // Poll every 1 second
+  pollInterval = setInterval(pollForCommands, 1000);
+  pollForCommands();
+}
+
+function checkHealth() {
+  var xhr = new XMLHttpRequest();
+  xhr.open("GET", POLL_URL + "/health?t=" + Date.now(), true);
+  xhr.timeout = 2000;
+  xhr.onload = function() {
+    if (xhr.status === 200) {
+      if (!pollInterval) startPolling();
+    } else {
+      postUI("status", { connected: false });
+    }
+  };
+  xhr.onerror = function() {
+    postUI("status", { connected: false });
+  };
+  xhr.send();
 }
 
 figma.showUI(__html__, { width: 280, height: 400 });
@@ -216,6 +231,12 @@ figma.skipInvisibleInstanceChildren = true;
 
 figma.ui.onmessage = function(msg) {
   if (msg.type === "ready") {
-    connect();
+    // Check immediately and then every 3 seconds if not connected
+    checkHealth();
+    if (!pollInterval) {
+      setInterval(function() {
+        if (!pollInterval) checkHealth();
+      }, 3000);
+    }
   }
 };
