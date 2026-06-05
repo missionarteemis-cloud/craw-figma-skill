@@ -24,9 +24,72 @@ var http = require('http');
 var net = require('net');
 var spawn = require('child_process').spawn;
 var exec = require('child_process').exec;
+var fs = require('fs');
+var path = require('path');
 
 var CONNECTOR_URL = process.env.FIGMA_CONNECTOR || 'http://localhost:9199';
 var NOTEBOOK_LM_URL = process.env.NOTEBOOKLM_URL || 'https://notebooklm.google.com/notebook/dfdba54c-4089-48e5-865a-1d6f49af29cc';
+
+// ── DESIGN TOKENS ──
+// Load base design system + optional project override
+var PROJECT_OVERRIDE = process.env.DESIGN_PROJECT || null;
+
+function loadDesignTokens() {
+  var tokensPath = path.join(__dirname, '..', 'design-tokens', 'design-tokens.json');
+  
+  if (!fs.existsSync(tokensPath)) {
+    console.log('  ⚠️  Design tokens not found, using defaults.');
+    return null;
+  }
+  
+  try {
+    var base = JSON.parse(fs.readFileSync(tokensPath, 'utf-8'));
+    
+    if (PROJECT_OVERRIDE) {
+      var projectFile = path.join(__dirname, '..', 'design-tokens', 'projects', PROJECT_OVERRIDE + '.json');
+      if (fs.existsSync(projectFile)) {
+        var project = JSON.parse(fs.readFileSync(projectFile, 'utf-8'));
+        delete project[PROJECT_OVERRIDE];
+        delete project.$extensions;
+        delete project.$description;
+        deepMerge(base, project);
+        console.log('  🎨 Project tokens loaded: ' + PROJECT_OVERRIDE);
+      }
+    }
+    
+    return base;
+  } catch(e) {
+    console.log('  ⚠️  Token load error: ' + e.message);
+    return null;
+  }
+}
+
+function deepMerge(target, source) {
+  for (var key in source) {
+    if (!source.hasOwnProperty(key)) continue;
+    if (source[key] && typeof source[key] === 'object' && !source[key].$value && !Array.isArray(source[key])) {
+      if (!target[key] || typeof target[key] !== 'object') target[key] = {};
+      deepMerge(target[key], source[key]);
+    } else {
+      target[key] = source[key];
+    }
+  }
+}
+
+function tokenValue(tokens, pathStr, fallback) {
+  if (!tokens) return fallback;
+  var parts = pathStr.split('.');
+  var current = tokens;
+  for (var i = 0; i < parts.length; i++) {
+    if (!current || typeof current !== 'object') return fallback;
+    current = current[parts[i]];
+  }
+  if (current && current.$value !== undefined) return current.$value;
+  if (current !== undefined && current !== null) return current;
+  return fallback;
+}
+
+var TOKENS = loadDesignTokens();
 
 // ── NOTEBOOKLM CLIENT ──
 // Sends a question to the NotebookLM MCP server via CLI subprocess.
@@ -50,36 +113,84 @@ function askNotebookLM(question) {
 }
 
 // ── PROPORTIONS ──
-var PROPORTIONS = {
-  heart: { aspectRatio: 0.85, lobeRatio: 0.55, tipRatio: 0.40 },
-  star: { defaultInnerRadius: 0.38 },
-};
+// Loaded from design tokens when available, fallback hardcoded
+function getProportions() {
+  var heartAR = parseFloat(tokenValue(TOKENS, 'proportions.heart.aspectRatio', '0.85'));
+  var heartLR = parseFloat(tokenValue(TOKENS, 'proportions.heart.lobeRatio', '0.55'));
+  var heartTR = parseFloat(tokenValue(TOKENS, 'proportions.heart.tipRatio', '0.40'));
+  var starIR = parseFloat(tokenValue(TOKENS, 'proportions.star.innerRatio', '0.38'));
+  
+  return {
+    heart: { aspectRatio: heartAR, lobeRatio: heartLR, tipRatio: heartTR },
+    star: { defaultInnerRadius: starIR },
+  };
+}
+
+function getToken(key, fallback) {
+  return tokenValue(TOKENS, key, fallback);
+}
 
 // ── COLORS ──
+// Built-in palette, extensible via design token overrides
 var COLORS = {
-  red:        { r: 0.90, g: 0.10, b: 0.10 },
-  darkRed:    { r: 0.70, g: 0.05, b: 0.05 },
-  lightRed:   { r: 1.00, g: 0.30, b: 0.30 },
-  gold:       { r: 0.95, g: 0.75, b: 0.15 },
-  blue:       { r: 0.20, g: 0.40, b: 0.95 },
-  darkBlue:   { r: 0.10, g: 0.15, b: 0.40 },
-  teal:       { r: 0.10, g: 0.75, b: 0.70 },
-  green:      { r: 0.20, g: 0.70, b: 0.20 },
-  purple:     { r: 0.55, g: 0.20, b: 0.80 },
-  pink:       { r: 0.95, g: 0.40, b: 0.65 },
-  orange:     { r: 0.95, g: 0.55, b: 0.10 },
-  white:      { r: 1.00, g: 1.00, b: 1.00 },
-  black:      { r: 0.00, g: 0.00, b: 0.00 }
+  red:        { r: 0.90, g: 0.10, b: 0.10, hex: '#E61A1A' },
+  darkRed:    { r: 0.70, g: 0.05, b: 0.05, hex: '#B30D0D' },
+  lightRed:   { r: 1.00, g: 0.30, b: 0.30, hex: '#FF4D4D' },
+  gold:       { r: 0.95, g: 0.75, b: 0.15, hex: '#F2BF26' },
+  blue:       { r: 0.20, g: 0.40, b: 0.95, hex: '#3366F2' },
+  darkBlue:   { r: 0.10, g: 0.15, b: 0.40, hex: '#1A2666' },
+  teal:       { r: 0.10, g: 0.75, b: 0.70, hex: '#1ABFB3' },
+  green:      { r: 0.20, g: 0.70, b: 0.20, hex: '#33B333' },
+  purple:     { r: 0.55, g: 0.20, b: 0.80, hex: '#8C33CC' },
+  pink:       { r: 0.95, g: 0.40, b: 0.65, hex: '#F266A6' },
+  orange:     { r: 0.95, g: 0.55, b: 0.10, hex: '#F28C1A' },
+  white:      { r: 1.00, g: 1.00, b: 1.00, hex: '#FFFFFF' },
+  black:      { r: 0.00, g: 0.00, b: 0.00, hex: '#000000' }
 };
+
+function hexToRgb(c) {
+  if (!c || typeof c !== 'string') return null;
+  var hex = c.replace('#', '');
+  if (hex.length < 6) return null;
+  return { r: parseInt(hex.substring(0,2),16)/255, g: parseInt(hex.substring(2,4),16)/255, b: parseInt(hex.substring(4,6),16)/255 };
+}
 
 function resolveColor(c) {
   if (typeof c === 'string' && COLORS[c.toLowerCase()]) return COLORS[c.toLowerCase()];
   if (typeof c === 'object' && c.r !== undefined) return c;
   if (typeof c === 'string' && c.startsWith('#')) {
-    var hex = c.replace('#', '');
-    return { r: parseInt(hex.substring(0,2),16)/255, g: parseInt(hex.substring(2,4),16)/255, b: parseInt(hex.substring(4,6),16)/255 };
+    return hexToRgb(c) || COLORS.red;
   }
   return COLORS.red;
+}
+
+function getShadowTokens(level) {
+  var shadowStr = getToken('elevation.' + level, null);
+  if (!shadowStr || shadowStr === 'none' || shadowStr.length === 0) return [];
+  
+  // If it's a DTCG shadow array (stored as JSON string in token), parse it
+  var shadows = [];
+  try {
+    if (typeof shadowStr === 'string') {
+      shadows = JSON.parse(shadowStr);
+    } else if (Array.isArray(shadowStr)) {
+      shadows = shadowStr;
+    }
+  } catch(e) {
+    return [{ type: 'DROP_SHADOW', blendMode: 'NORMAL', color: { r: 0, g: 0, b: 0, a: 0.25 }, offset: { x: 0, y: 4 }, radius: 12, visible: true }];
+  }
+  
+  return shadows.map(function(s) {
+    var col = hexToRgb(s.color || '#000000') || { r: 0, g: 0, b: 0 };
+    return {
+      type: 'DROP_SHADOW',
+      blendMode: 'NORMAL',
+      color: { r: col.r, g: col.g, b: col.b, a: parseFloat(s.alpha || '0.25') },
+      offset: { x: s.offsetX || 0, y: s.offsetY || 4 },
+      radius: s.radius || 8,
+      visible: true
+    };
+  });
 }
 
 function solidFill(color, opacity) {
@@ -116,10 +227,12 @@ function wait(ms) { return new Promise(function(r) { setTimeout(r, ms); }); }
 
 // ── SHAPE BUILDERS ──
 
+var PROPORTIONS = getProportions();
+
 var builders = {};
 
 builders.heart = function(params) {
-  var size = params.size || 200;
+  var size = params.size || parseInt(getToken('icon.sizes.xxl', '200'));
   var x = params.x || 300;
   var y = params.y || 300;
   var color = resolveColor(params.color || 'red');
@@ -150,7 +263,7 @@ builders.heart = function(params) {
 };
 
 builders.star = function(params) {
-  var size = params.size || 150;
+  var size = params.size || parseInt(getToken('icon.sizes.lg', '150'));
   var x = params.x || 300;
   var y = params.y || 300;
   var points = params.points || 5;
@@ -161,6 +274,50 @@ builders.star = function(params) {
     command: "createStar",
     payload: { name: "Star", x: x, y: y, width: size, height: size, pointCount: points, innerRadius: PROPORTIONS.star.defaultInnerRadius, fills: fills, strokes: [] }
   }];
+};
+
+builders.button = function(params) {
+  var label = params.label || 'Button';
+  var size = params.size || 160;
+  var x = params.x || 300;
+  var y = params.y || 300;
+  var color = resolveColor(params.color || 'blue');
+  
+  // Tokens-driven values
+  var borderRadius = parseInt(getToken('border-radius.md', '8'));
+  var paddingH = parseInt(getToken('spacing.md', '16'));
+  var paddingV = parseInt(getToken('spacing.sm', '8'));
+  var fontSize = parseInt(getToken('typography.size.sm', '14'));
+  var buttonH = fontSize + paddingV * 2;
+  var buttonW = size + paddingH * 2;
+  
+  return [
+    {
+      command: "createRectangle",
+      payload: {
+        name: "Button",
+        x: x, y: y,
+        width: buttonW,
+        height: buttonH,
+        cornerRadius: borderRadius,
+        fills: solidFill(color, 1),
+        effects: getShadowTokens('low'),
+        strokes: []
+      }
+    },
+    {
+      command: "createText",
+      payload: {
+        name: "Label",
+        x: x + paddingH,
+        y: y + paddingV,
+        characters: label,
+        fontSize: fontSize,
+        fontName: { family: getToken('typography.font-family.ui', 'Inter'), style: 'Medium' },
+        fills: solidFill('white', 1)
+      }
+    }
+  ];
 };
 
 // ── ORCHESTRATOR ──
@@ -252,10 +409,11 @@ async function orchestrate(shapeName, params) {
             transform: [[1, 0, 0], [0, 1, 0]]
           }));
 
-          // Shadow
+          // Shadow (from tokens)
+          var shadowEffects = getShadowTokens(params.shadowLevel || 'medium');
           effectCmds.push(sendCommand("updateNode", {
             id: finalId,
-            effects: [{ type: "DROP_SHADOW", blendMode: "NORMAL", color: { r: 0, g: 0, b: 0, a: 0.25 }, offset: { x: 0, y: 4 }, radius: 12, visible: true }]
+            effects: shadowEffects
           }));
 
           await Promise.all(effectCmds);
@@ -318,6 +476,24 @@ function parsePrompt(text) {
   if (text.includes('glass') || text.includes('vetr') || text.includes('trasparent')) params.glassmorphism = true;
   if (text.includes('neon') || text.includes('luc')) params.neon = true;
   if (text.includes('ombra') || text.includes('shadow')) params.shadow = true;
+  
+  // Shadow level
+  if (text.includes('alta ombr') || text.includes('high shadow')) params.shadowLevel = 'high';
+  else if (params.shadow) params.shadowLevel = 'medium';
+  else params.shadowLevel = 'low';
+  
+  // Button label
+  if (params.shape === 'button') {
+    var labelMatch = text.match(/"([^"]+)"/) || text.match(/'([^']+)'/);
+    if (!labelMatch) {
+      // Try to extract label after 'button'/'bottone'
+      var afterBtn = text.split(/bottone|button|pulsante/)[1];
+      if (afterBtn) {
+        labelMatch = afterBtn.match(/\s*"?([a-zA-Z0-9\s]+)"?/);
+      }
+    }
+    if (labelMatch) params.label = labelMatch[1].trim().substring(0, 20);
+  }
 
   return params;
 }

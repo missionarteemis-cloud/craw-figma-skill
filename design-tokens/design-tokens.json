@@ -127,6 +127,18 @@
     }
   },
 
+  "proportions": {
+    "$description": "Shape proportions for the Design Engine.",
+    "heart": {
+      "aspectRatio": { "$value": "0.85", "$type": "number", "$description": "Width/height ratio" },
+      "lobeRatio":  { "$value": "0.55", "$type": "number" },
+      "tipRatio":   { "$value": "0.40", "$type": "number" }
+    },
+    "star": {
+      "innerRatio": { "$value": "0.38", "$type": "number", "$description": "Inner/outer radius ratio for stars" }
+    }
+  },
+
   "motion": {
     "$description": "Duration and easing tokens for transitions.",
     "duration": {
