@@ -187,11 +187,56 @@ commands.createVector = function(p) {
   return result;
 };
 
+// ── FONT LOADING ──
+// Pre-load common fonts at plugin start so createText works without errors
+var loadedFonts = {};
+
+function addLoadedFont(name, style) {
+  var key = name + '_' + (style || 'Regular');
+  loadedFonts[key] = true;
+}
+
+function loadDefaultFonts() {
+  var fontPairs = [
+    { family: 'Inter', style: 'Regular' },
+    { family: 'Inter', style: 'Medium' },
+    { family: 'Inter', style: 'Bold' },
+    { family: 'Inter', style: 'Semi Bold' },
+    { family: 'Inter', style: 'Light' },
+    { family: 'Roboto', style: 'Regular' },
+    { family: 'Roboto', style: 'Medium' },
+    { family: 'JetBrains Mono', style: 'Regular' },
+    { family: 'JetBrains Mono', style: 'Bold' },
+  ];
+  var promises = [];
+  for (var i = 0; i < fontPairs.length; i++) {
+    (function(fp) {
+      promises.push(
+        figma.loadFontAsync(fp).then(function() {
+          addLoadedFont(fp.family, fp.style);
+        }).catch(function() {})
+      );
+    })(fontPairs[i]);
+  }
+  return Promise.all(promises);
+}
+
 commands.createText = function(p) {
   var text = figma.createText();
   text.characters = typeof p.characters !== "undefined" ? p.characters : "Text";
   text.x = typeof p.x !== "undefined" ? p.x : 0;
   text.y = typeof p.y !== "undefined" ? p.y : 0;
+  
+  // If fontFamily specified, try to load it
+  var fontFamily = (p.fontName && p.fontName.family) || 'Inter';
+  var fontStyle = (p.fontName && p.fontName.style) || 'Regular';
+  var loadKey = fontFamily + '_' + fontStyle;
+  
+  if (!loadedFonts[loadKey]) {
+    // Font not preloaded — try loading synchronously
+    throw new Error('Font "' + fontFamily + ' ' + fontStyle + '" not loaded. Preload with figma.loadFontAsync().');
+  }
+  
   if (p.name) text.name = p.name;
   if (p.fontSize) text.fontSize = p.fontSize;
   if (p.fills && hasFills(text)) text.fills = p.fills;
@@ -627,14 +672,23 @@ function startSelectionUpdates() {
 figma.showUI(__html__, { width: 320, height: 400 });
 figma.skipInvisibleInstanceChildren = true;
 
-setTimeout(function() {
+// Load fonts before starting operations
+loadDefaultFonts().then(function() {
   var logMsg = {};
-  logMsg.text = "Plugin loaded";
+  logMsg.text = "Plugin loaded (fonts ready)";
   logMsg.level = "";
   postUI("log", logMsg);
   startPolling();
   startSelectionUpdates();
-}, 1000);
+}).catch(function(err) {
+  // Even if some fonts fail, start anyway
+  var logMsg = {};
+  logMsg.text = "Plugin loaded (fonts partial)";
+  logMsg.level = "";
+  postUI("log", logMsg);
+  startPolling();
+  startSelectionUpdates();
+});
 
 figma.ui.onmessage = function(msg) {
   if (msg.type === "command") {
