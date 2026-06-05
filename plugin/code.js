@@ -186,7 +186,9 @@ function connect() {
     log.text = "Connected to Craw";
     log.level = "";
     postUI("log", log);
-    postUI("status", { connected: true });
+    var statusMsg = {};
+    statusMsg.connected = true;
+    postUI("status", statusMsg);
     startPeriodicUpdates();
   };
   ws.onmessage = function(event) {
@@ -241,7 +243,9 @@ function connect() {
     }
   };
   ws.onclose = function() {
-    postUI("status", { connected: false });
+    var statusMsg = {};
+    statusMsg.connected = false;
+    postUI("status", statusMsg);
     ws = null;
     scheduleReconnect();
   };
