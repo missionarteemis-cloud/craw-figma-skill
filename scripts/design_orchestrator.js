@@ -329,7 +329,7 @@ builders.button = function(params) {
         y: y + paddingV,
         characters: label.toUpperCase(),
         fontSize: fontSize,
-        fontName: { family: fontFamily, style: 'Medium' },
+        fontName: { family: fontFamily, style: 'Regular' },
         fills: fillsWhite,
         letterSpacing: { value: 0.08, unit: 'PERCENT' }
       }
