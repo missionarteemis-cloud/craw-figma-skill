@@ -1,28 +1,15 @@
 #!/usr/bin/env node
 
-/**
- * figma_send.js — Invia un comando al plugin Figma via HTTP.
- *
- * Uso:
- *   node figma_send.js <comando> [--payload '{"key":"val"}']
- *   node figma_send.js createRectangle --payload '{"x":100,"y":100,"width":400,"height":300,"fillColor":{"r":0.14,"g":0.49,"b":1},"cornerRadius":12}'
- *   node figma_send.js getSelection
- *
- * Opzioni:
- *   --url http://localhost:9199   (default: $FIGMA_CONNECTOR_URL o http://localhost:9199)
- */
-
 var http = require("http");
 var url_mod = require("url");
 
-var CONNECTOR_URL = process.env.FIGMA_CONNECTOR_URL || "http://localhost:9199";
+var CONNECTOR_URL = "http://localhost:9199";
 
 var args = process.argv.slice(2);
 var command = args[0];
 
 if (!command || command === "--help") {
   console.log("Usage: node figma_send.js <command> [--payload '{}']");
-  console.log("Commands: createRectangle, createFrame, createEllipse, createText, selectNode, updateNode, deleteNode, getSelection, getPageInfo, setFillColor, groupSelection");
   process.exit(command ? 0 : 1);
 }
 
@@ -81,7 +68,6 @@ var req = http.request(options, function(res) {
 
 req.on("error", function(err) {
   console.error("Connection error:", err.message);
-  console.error("Make sure figma_connector.js is running on " + CONNECTOR_URL);
   process.exit(1);
 });
 

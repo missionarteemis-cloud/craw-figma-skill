@@ -1,8 +1,9 @@
-/// Craw Figma Connector — Plugin Code (ES5, HTTP via figma.networkRequest)
-/// Uses Figma's built-in HTTP function for requests
+/// Craw Figma Connector — Plugin Code (ES5, HTTP via UI bridge)
+/// Plugin code talks to UI via postMessage; UI does real HTTP
 
 var pollInterval = null;
 var POLL_URL = "http://localhost:9199";
+var POLLING_ACTIVE = false;
 
 function postUI(type, data) {
   data = data || {};
@@ -27,9 +28,10 @@ var commands = {
       rect.y = typeof p.y !== "undefined" ? p.y : 0;
       rect.resize(typeof p.width !== "undefined" ? p.width : 200, typeof p.height !== "undefined" ? p.height : 100);
       if (p.cornerRadius) rect.cornerRadius = p.cornerRadius;
-      if (p.fillColor) rect.fills = [{ type: "SOLID", color: p.fillColor, opacity: p.opacity || 1 }];
-      if (p.strokeColor) rect.strokes = [{ type: "SOLID", color: p.strokeColor }];
+      if (p.fills) rect.fills = p.fills;
+      if (p.strokes) rect.strokes = p.strokes;
       if (p.strokeWeight) rect.strokeWeight = p.strokeWeight;
+      if (p.effects) rect.effects = p.effects;
       if (p.name) rect.name = p.name;
       figma.currentPage.appendChild(rect);
       return { id: rect.id, name: rect.name, x: rect.x, y: rect.y, width: rect.width, height: rect.height };
@@ -42,7 +44,8 @@ var commands = {
       frame.x = typeof p.x !== "undefined" ? p.x : 0;
       frame.y = typeof p.y !== "undefined" ? p.y : 0;
       frame.resize(typeof p.width !== "undefined" ? p.width : 400, typeof p.height !== "undefined" ? p.height : 300);
-      if (p.fillColor) frame.fills = [{ type: "SOLID", color: p.fillColor, opacity: p.opacity || 0 }];
+      if (p.fills) frame.fills = p.fills;
+      if (p.effects) frame.effects = p.effects;
       if (p.name) frame.name = p.name;
       figma.currentPage.appendChild(frame);
       return { id: frame.id, name: frame.name };
@@ -55,7 +58,8 @@ var commands = {
       ell.x = typeof p.x !== "undefined" ? p.x : 0;
       ell.y = typeof p.y !== "undefined" ? p.y : 0;
       ell.resize(typeof p.width !== "undefined" ? p.width : 100, typeof p.height !== "undefined" ? p.height : 100);
-      if (p.fillColor) ell.fills = [{ type: "SOLID", color: p.fillColor }];
+      if (p.fills) ell.fills = p.fills;
+      if (p.effects) ell.effects = p.effects;
       if (p.name) ell.name = p.name;
       figma.currentPage.appendChild(ell);
       return { id: ell.id, name: ell.name };
@@ -70,11 +74,9 @@ var commands = {
       if (p.name) text.name = p.name;
       if (typeof p.characters !== "undefined") text.characters = p.characters;
       if (p.fontSize) text.fontSize = p.fontSize;
-      if (p.fillColor) text.fills = [{ type: "SOLID", color: p.fillColor }];
+      if (p.fills) text.fills = p.fills;
       if (p.textAlignHorizontal) text.textAlignHorizontal = p.textAlignHorizontal;
-      if (p.fontName && p.fontName.family) {
-        text.fontName = p.fontName;
-      }
+      if (p.fontName && p.fontName.family) text.fontName = p.fontName;
       figma.currentPage.appendChild(text);
       return { id: text.id, name: text.name };
     });
@@ -98,7 +100,8 @@ var commands = {
     if (typeof p.x !== "undefined" && hasPosition(node)) node.x = p.x;
     if (typeof p.y !== "undefined" && hasPosition(node)) node.y = p.y;
     if (p.resize && hasResize(node)) node.resize(p.resize.width, p.resize.height);
-    if (p.fillColor && hasFills(node)) node.fills = [{ type: "SOLID", color: p.fillColor }];
+    if (p.fills && hasFills(node)) node.fills = p.fills;
+    if (p.effects) node.effects = p.effects;
     if (p.name) node.name = p.name;
     return { id: node.id, name: node.name, updated: true };
   },
@@ -133,7 +136,7 @@ var commands = {
 
   setFillColor: function(p) {
     var node = figma.getNodeById(p.id);
-    if (!node || !hasFills(node)) throw new Error("Node not found or no fills: " + p.id);
+    if (!node || !hasFills(node)) throw new Error("Node not found or no fills");
     node.fills = [{ type: "SOLID", color: p.color, opacity: p.opacity || 1 }];
     return { id: node.id, fillSet: true };
   },
@@ -146,21 +149,17 @@ var commands = {
   }
 };
 
-// ── HTTP via node mechanism ─────────────────────────────────────────
-// Figma sandbox doesn't have XMLHttpRequest or fetch.
-// We use the UI to do HTTP requests instead.
-
-function httpGet(url, callback) {
+function httpGet(url) {
   figma.ui.postMessage({ type: "http-get", url: url });
 }
 
-function httpPost(url, body, callback) {
+function httpPost(url, body) {
   figma.ui.postMessage({ type: "http-post", url: url, body: body });
 }
 
-// Poll for commands via UI-mediated HTTP
 function pollForCommands() {
-  httpGet(POLL_URL + "/next-command?t=" + Date.now());
+  var ts = Date.now();
+  httpGet(POLL_URL + "/next-command?t=" + ts);
 }
 
 function sendResultToConnector(id, status, data) {
@@ -170,54 +169,6 @@ function sendResultToConnector(id, status, data) {
     data: status === "ok" ? data : { error: data }
   }));
 }
-
-function checkHealth() {
-  httpGet(POLL_URL + "/health?t=" + Date.now());
-}
-
-figma.showUI(__html__, { width: 280, height: 400 });
-figma.skipInvisibleInstanceChildren = true;
-
-// Messages from UI
-figma.ui.onmessage = function(msg) {
-  if (msg.type === "ready") {
-    checkHealth();
-    if (!pollInterval) {
-      pollInterval = setInterval(function() {
-        if (!pollInterval) checkHealth();
-      }, 3000);
-    }
-  }
-
-  // Response from HTTP request made by UI
-  if (msg.type === "http-response") {
-    var data = msg.responseData;
-    if (!data) return;
-
-    if (msg.url.indexOf("/next-command") !== -1) {
-      if (data && data.command) {
-        executeCommand(data);
-        // Poll again quickly after executing
-        setTimeout(pollForCommands, 200);
-      }
-    } else if (msg.url.indexOf("/health") !== -1) {
-      postUI("status", { connected: true });
-      postUI("log", { text: "Connected to Craw", level: "" });
-      // Start polling for commands
-      if (!pollInterval) {
-        pollInterval = "active";
-        pollForCommands();
-        setInterval(pollForCommands, 1500);
-      }
-    }
-  }
-
-  if (msg.type === "http-error") {
-    if (msg.url.indexOf("/health") !== -1) {
-      postUI("status", { connected: false });
-    }
-  }
-};
 
 function executeCommand(cmd) {
   if (!cmd || !cmd.command) return;
@@ -230,7 +181,10 @@ function executeCommand(cmd) {
   try {
     var result = handler(cmd.payload || {});
     if (result && typeof result.then === "function") {
-      result.then(function(res) { sendResultToConnector(cmd.id, "ok", res); }, function(err) { sendResultToConnector(cmd.id, "error", err.message || String(err)); });
+      result.then(
+        function(res) { sendResultToConnector(cmd.id, "ok", res); },
+        function(err) { sendResultToConnector(cmd.id, "error", err.message || String(err)); }
+      );
     } else {
       sendResultToConnector(cmd.id, "ok", result);
     }
@@ -238,3 +192,42 @@ function executeCommand(cmd) {
     sendResultToConnector(cmd.id, "error", err.message || String(err));
   }
 }
+
+figma.showUI(__html__, { width: 280, height: 400 });
+figma.skipInvisibleInstanceChildren = true;
+
+figma.ui.onmessage = function(msg) {
+  // ready event from UI
+  if (msg.type === "ready") {
+    postUI("log", { text: "Plugin loaded", level: "" });
+    return;
+  }
+
+  // HTTP response from UI
+  if (msg.type === "http-response") {
+    var data = msg.responseData;
+    if (!data) return;
+
+    if (msg.url.indexOf("/next-command") !== -1) {
+      if (data && data.command) {
+        executeCommand(data);
+        setTimeout(pollForCommands, 200);
+      }
+    } else if (msg.url.indexOf("/health") !== -1) {
+      postUI("status", { connected: true });
+      postUI("log", { text: "Connected to Craw", level: "" });
+      if (!POLLING_ACTIVE) {
+        POLLING_ACTIVE = true;
+        pollForCommands();
+        setInterval(pollForCommands, 1500);
+      }
+    }
+  }
+
+  // HTTP error from UI
+  if (msg.type === "http-error") {
+    if (msg.url.indexOf("/health") !== -1) {
+      postUI("status", { connected: false });
+    }
+  }
+};

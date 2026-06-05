@@ -49,6 +49,7 @@
     var dot = document.getElementById('dot');
     var statusText = document.getElementById('statusText');
     var logEl = document.getElementById('log');
+    var healthInterval = null;
 
     function addLog(msg, cls) {
       var p = document.createElement('p');
@@ -58,12 +59,66 @@
       logEl.scrollTop = logEl.scrollHeight;
     }
 
-    // Handle HTTP requests from plugin code
+    function sendToPlugin(msg) {
+      parent.postMessage({ pluginMessage: msg }, '*');
+    }
+
+    function get(url, callback) {
+      var xhr = new XMLHttpRequest();
+      xhr.open('GET', url, true);
+      xhr.timeout = 5000;
+      xhr.onload = function() {
+        var data = null;
+        try { data = JSON.parse(xhr.responseText); } catch(e) {}
+        callback(null, data);
+      };
+      xhr.onerror = function(e) {
+        callback(e, null);
+      };
+      xhr.send();
+    }
+
+    function post(url, body, callback) {
+      var xhr = new XMLHttpRequest();
+      xhr.open('POST', url, true);
+      xhr.setRequestHeader('Content-Type', 'application/json');
+      xhr.timeout = 5000;
+      xhr.onload = function() {
+        var data = null;
+        try { data = JSON.parse(xhr.responseText); } catch(e) {}
+        callback(null, data);
+      };
+      xhr.onerror = function(e) {
+        callback(e, null);
+      };
+      xhr.send(body);
+    }
+
+    function checkHealth() {
+      get('http://localhost:9199/health?t=' + Date.now(), function(err, data) {
+        if (err) {
+          sendToPlugin({ type: 'http-error', url: 'http://localhost:9199/health' });
+          return;
+        }
+        sendToPlugin({ type: 'http-response', url: 'http://localhost:9199/health', status: 200, responseData: data });
+        // Start continuous poll for commands once healthy
+        if (!window._pollStarted) {
+          window._pollStarted = true;
+          setInterval(function() {
+            get('http://localhost:9199/next-command?t=' + Date.now(), function(err, data) {
+              if (err) return;
+              sendToPlugin({ type: 'http-response', url: 'http://localhost:9199/next-command', status: 200, responseData: data });
+            });
+          }, 1500);
+        }
+      });
+    }
+
+    // Handle messages from plugin code
     window.addEventListener('message', function(event) {
-      var msg = event.data.pluginMessage;
+      var msg = event.data.pluginMessage || event.data;
       if (!msg) return;
 
-      // UI updates from plugin
       if (msg.type === 'status') {
         dot.className = 'dot' + (msg.connected ? ' connected' : '');
         statusText.textContent = msg.connected ? 'Connected to Craw' : 'Disconnected';
@@ -73,45 +128,34 @@
         addLog(msg.text, msg.level);
         return;
       }
-
-      // HTTP request from plugin
       if (msg.type === 'http-get') {
-        var xhr = new XMLHttpRequest();
-        xhr.open('GET', msg.url, true);
-        xhr.timeout = 5000;
-        xhr.onload = function() {
-          var data = null;
-          try { data = JSON.parse(xhr.responseText); } catch(e) {}
-          parent.postMessage({ pluginMessage: { type: 'http-response', url: msg.url, status: xhr.status, responseData: data } }, '*');
-        };
-        xhr.onerror = function() {
-          parent.postMessage({ pluginMessage: { type: 'http-error', url: msg.url, error: 'Network error' } }, '*');
-        };
-        xhr.send();
+        get(msg.url, function(err, data) {
+          if (err) {
+            sendToPlugin({ type: 'http-error', url: msg.url, error: 'Network error' });
+          } else {
+            sendToPlugin({ type: 'http-response', url: msg.url, status: 200, responseData: data });
+          }
+        });
         return;
       }
-
       if (msg.type === 'http-post') {
-        var xhr = new XMLHttpRequest();
-        xhr.open('POST', msg.url, true);
-        xhr.setRequestHeader('Content-Type', 'application/json');
-        xhr.timeout = 5000;
-        xhr.onload = function() {
-          var data = null;
-          try { data = JSON.parse(xhr.responseText); } catch(e) {}
-          parent.postMessage({ pluginMessage: { type: 'http-response', url: msg.url, status: xhr.status, responseData: data } }, '*');
-        };
-        xhr.onerror = function() {
-          parent.postMessage({ pluginMessage: { type: 'http-error', url: msg.url, error: 'Network error' } }, '*');
-        };
-        xhr.send(msg.body);
+        post(msg.url, msg.body, function(err, data) {
+          if (err) {
+            sendToPlugin({ type: 'http-error', url: msg.url, error: 'Network error' });
+          } else {
+            sendToPlugin({ type: 'http-response', url: msg.url, status: 200, responseData: data });
+          }
+        });
         return;
       }
     });
 
-    // Tell plugin we're ready
-    parent.postMessage({ pluginMessage: { type: 'ready' } }, '*');
+    // Initial ready signal
+    sendToPlugin({ type: 'ready' });
     addLog('Craw Figma Connector ready');
+
+    // Start health checks
+    setTimeout(checkHealth, 300);
   </script>
 </body>
 </html>
