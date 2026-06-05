@@ -504,15 +504,10 @@ commands.moveNodes = function(p) {
 commands.importSvg = function(p) {
   if (!p.svg) throw new Error("Missing 'svg' parameter");
   
-  var node;
-  try {
-    node = figma.createNodeFromSvgAsync(p.svg);
-  } catch(e) {
-    throw new Error("SVG parse error: " + e.message);
-  }
+  // figma.createNodeFromSvgAsync is a standard Figma API method
+  var promise = figma.createNodeFromSvgAsync(p.svg);
   
-  // nodeFromSvgAsync returns a promise, we handle it here
-  return node.then(function(nodes) {
+  return promise.then(function(nodes) {
     var mainNode = null;
     var nodeIds = [];
     
