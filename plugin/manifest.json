@@ -1,6 +1,6 @@
 {
   "name": "Craw Figma Connector",
-  "id": "craw-figma-connector",
+  "id": "ai.craw.figma-connector",
   "api": "1.0.0",
   "main": "code.js",
   "ui": "ui.html",
