@@ -168,7 +168,13 @@ commands.createVector = function(p) {
       segs.push(seg);
     }
     vector.vectorNetwork = { vertices: vtx, segments: segs, regions: p.regions || [] };
-    if (typeof p.closed !== "undefined") { var handles = vector.vectorNetwork; handles.regions = handles.regions || []; if (p.closed && handles.regions.length === 0) handles.regions.push({ windingRule: "EVENODD", loops: [segs.map(function(s, idx) { return idx; })] }); }
+  }
+  // If closed, set regions on the network directly
+  if (p.closed && vector.vectorNetwork) {
+    var net = vector.vectorNetwork;
+    if (!net.regions || net.regions.length === 0) {
+      net.regions = [{ windingRule: "EVENODD", loops: [net.segments.map(function(s, idx) { return idx; })] }];
+    }
   }
   figma.currentPage.appendChild(vector);
   var result = {};
