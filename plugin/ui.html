@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #1a1a2e;
+    color: #e0e0e0;
+    font-family: -apple-system, sans-serif;
+    padding: 16px;
+    font-size: 13px;
+  }
+  .status { 
+    display: flex; align-items: center; gap: 8px;
+    padding: 10px 12px;
+    background: #16213e;
+    border-radius: 8px;
+    margin-bottom: 12px;
+  }
+  .dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: #e74c3c;
+    transition: background 0.3s;
+  }
+  .dot.connected { background: #2ecc71; }
+  .log {
+    background: #0f3460;
+    border-radius: 6px;
+    padding: 10px;
+    max-height: 300px;
+    overflow-y: auto;
+    font-family: monospace;
+    font-size: 11px;
+    line-height: 1.5;
+  }
+  .log p { margin: 2px 0; opacity: 0.8; }
+  .log p.cmd { color: #64b5f6; opacity: 1; }
+  .log p.done { color: #81c784; }
+  .log p.err { color: #e57373; }
+</style>
+</head>
+<body>
+  <div class="status">
+    <div class="dot" id="dot"></div>
+    <span id="statusText">Disconnected</span>
+  </div>
+  <div class="log" id="log"></div>
+  <script>
+    const dot = document.getElementById('dot');
+    const statusText = document.getElementById('statusText');
+    const log = document.getElementById('log');
+
+    function addLog(msg, cls = '') {
+      const p = document.createElement('p');
+      p.className = cls;
+      p.textContent = '> ' + msg;
+      log.appendChild(p);
+      log.scrollTop = log.scrollHeight;
+    }
+
+    // Connect to parent plugin code
+    window.onmessage = (event) => {
+      const msg = event.data.pluginMessage;
+      if (!msg) return;
+      if (msg.type === 'status') {
+        dot.className = 'dot' + (msg.connected ? ' connected' : '');
+        statusText.textContent = msg.connected ? 'Connected to Craw' : 'Disconnected';
+      } else if (msg.type === 'log') {
+        addLog(msg.text, msg.level || '');
+      }
+    };
+
+    // Tell plugin code we're ready
+    parent.postMessage({ pluginMessage: { type: 'ready' } }, '*');
+    addLog('Craw Figma Connector ready');
+  </script>
+</body>
+</html>
