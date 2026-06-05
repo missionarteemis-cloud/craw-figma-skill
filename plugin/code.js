@@ -216,10 +216,20 @@ figma.ui.onmessage = function(msg) {
     } else if (msg.url.indexOf("/health") !== -1) {
       postUI("status", { connected: true });
       postUI("log", { text: "Connected to Craw", level: "" });
+      // Send page info to UI
+      var page = figma.currentPage;
+      postUI("page-info", { name: page.name, id: page.id, childCount: page.children.length });
       if (!POLLING_ACTIVE) {
         POLLING_ACTIVE = true;
         pollForCommands();
         setInterval(pollForCommands, 1500);
+        // Poll selection periodically
+        setInterval(function() {
+          var sel = figma.currentPage.selection.map(function(n) {
+            return { id: n.id, name: n.name, type: n.type, width: n.width, height: n.height };
+          });
+          postUI("selection-update", { nodes: sel });
+        }, 1000);
       }
     }
   }
