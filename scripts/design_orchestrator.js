@@ -208,7 +208,7 @@ async function orchestrate(shapeName, params) {
             gradientType: "LINEAR",
             stops: [
               { position: 0, color: { r: Math.min(1, eColor.r + 0.2), g: Math.min(1, eColor.g + 0.2), b: Math.min(1, eColor.b + 0.2), a: 1 } },
-              { position: 1, color: eColor }
+              { position: 1, color: { r: eColor.r, g: eColor.g, b: eColor.b, a: 1 } }
             ],
             transform: [[1, 0, 0], [0, 1, 0]]
           }));
