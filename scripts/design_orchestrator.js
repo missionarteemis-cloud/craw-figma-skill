@@ -420,6 +420,22 @@ async function orchestrate(shapeName, params) {
           console.log("  ✓ Effects applied");
 
           console.log("\n✅ Done! Shape created in Figma.");
+          
+          // Step 4: Critique & Refine (automatic)
+          await wait(500);
+          try {
+            var critic = spawn('node', [
+              path.join(__dirname, 'design_critic.js'),
+              '--id', finalId,
+              '--type', (params.shape === 'button' ? 'button' : 'icon')
+            ].concat(process.env.DESIGN_PROJECT ? ['--project', process.env.DESIGN_PROJECT] : []), {
+              stdio: 'inherit'
+            });
+            await new Promise(function(resolve) { critic.on('exit', resolve); });
+          } catch(e) {
+            console.log("  ℹ️  Critique skipped: " + e.message);
+          }
+          
           return { status: 'ok', id: finalId };
         }
       }
@@ -429,6 +445,22 @@ async function orchestrate(shapeName, params) {
     }
   } else if (shapeIds.length === 1) {
     console.log("\n✅ Single shape created at id=" + shapeIds[0]);
+    
+    // Critique & Refine
+    await wait(500);
+    try {
+      var critic = spawn('node', [
+        path.join(__dirname, 'design_critic.js'),
+        '--id', shapeIds[0],
+        '--type', (params.shape === 'button' ? 'button' : 'icon')
+      ].concat(process.env.DESIGN_PROJECT ? ['--project', process.env.DESIGN_PROJECT] : []), {
+        stdio: 'inherit'
+      });
+      await new Promise(function(resolve) { critic.on('exit', resolve); });
+    } catch(e) {
+      console.log("  ℹ️  Critique skipped: " + e.message);
+    }
+    
     return { status: 'ok', id: shapeIds[0] };
   }
 }
