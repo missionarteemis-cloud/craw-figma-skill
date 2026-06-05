@@ -4,7 +4,13 @@ let ws = null;
 let reconnectTimer = null;
 const WS_URL = "ws://localhost:9199";
 function postUI(type, data = {}) {
-    figma.ui.postMessage({ type, ...data });
+    const msg = { type: type };
+    for (const key in data) {
+        if (Object.prototype.hasOwnProperty.call(data, key)) {
+            msg[key] = data[key];
+        }
+    }
+    figma.ui.postMessage(msg);
 }
 function hasFills(node) {
     return "fills" in node;

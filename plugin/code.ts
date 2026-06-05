@@ -28,7 +28,13 @@ let reconnectTimer: number | null = null;
 const WS_URL = "ws://localhost:9199";
 
 function postUI(type: string, data: Record<string, unknown> = {}) {
-  figma.ui.postMessage({ type, ...data } as Record<string, unknown>);
+  const msg: Record<string, unknown> = { type: type };
+  for (const key in data) {
+    if (Object.prototype.hasOwnProperty.call(data, key)) {
+      msg[key] = data[key];
+    }
+  }
+  figma.ui.postMessage(msg);
 }
 
 type CommandHandler = (payload: any) => Promise<unknown>;
