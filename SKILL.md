@@ -1,24 +1,26 @@
 ---
 name: craw-figma
-description: Read, analyze, and design inside Figma. Read files via REST API; create and modify layers via a local WebSocket connector + Figma plugin. Full bidirectional control — extract design tokens, export assets, create shapes, text, frames, and manipulate layers in real time.
+description: Full bidirectional Figma integration — read files via REST API, create/modify/delete layers via local WebSocket connector + Figma plugin. Audit accessibility, extract design tokens, export assets. Write operations appear in real time on Figma Desktop.
 ---
 
 # Craw Figma Skill
 
-Bidirectional Figma integration: read via REST API, write via a local plugin connector.
+Complete Figma control for AI agents: **read** via REST API, **write** via a local plugin. Change design layers, extract design tokens, audit accessibility, export assets.
 
 ## Architecture
 
 ```
-Craw ──→ figma_client.mjs (REST API) ──→ Figma cloud (read-only)
-     ──→ figma_send.js    (WebSocket) ──→ figma_connector.js ↔ Figma Plugin → Figma Desktop (read + write)
+Craw ──→ figma_client.mjs (REST API) ──────→ Figma cloud    (read: file, styles, export)
+     ──→ figma_send.js    (WebSocket) ──→ figma_connector.js ──→ Figma Plugin → Figma Desktop
+     ──→ style_auditor.mjs              (design system analysis, CSS tokens)
+     ──→ accessibility_checker.mjs      (WCAG AA/AAA, contrast, touch targets)
 ```
 
 ## Requirements
 
-- **Figma Personal Access Token** → for REST API (read)
-- **Figma Desktop** + **Craw Figma Connector plugin** → for write/design operations
-- **Node.js 18+** (for WebSocket scripts)
+- **Figma Personal Access Token** → for REST API (read). Get it: Figma → Settings → Account → Personal Access Tokens
+- **Figma Desktop** → required for write operations
+- **Node.js 18+**
 
 ## Quick Start
 
@@ -26,129 +28,129 @@ Craw ──→ figma_client.mjs (REST API) ──→ Figma cloud (read-only)
 
 ```bash
 export FIGMA_ACCESS_TOKEN="figd_your_token_here"
-# or add to your .env:
-echo 'FIGMA_ACCESS_TOKEN="figd_your_token"' >> .env
 ```
 
 ### 2. Read a Figma file
 
 ```bash
 node scripts/figma_client.mjs get-file <file-key>
-node scripts/figma_client.mjs get-file "abc123" --depth 4
+# Example: node scripts/figma_client.mjs get-file "ABC123xyz" --depth 4
 ```
 
-Get a file key from any Figma share URL:
-`https://www.figma.com/design/<FILE_KEY>/...`
+Get a file key from: `https://www.figma.com/design/<FILE_KEY>/...`
 
-### 3. Install the plugin & connector (for write access)
+### 3. Install the Figma Plugin (one-time, for write access)
 
-#### Install the Figma Plugin
+1. Clone/download the skill repository
+2. Open **Figma Desktop** → **Plugins** → **Development** → **Import plugin from manifest...**
+3. Select `plugin/manifest.json` from this skill's directory
+4. The plugin "Craw Figma Connector" is now installed
 
-1. Open Figma Desktop → **Plugins** → **Development** → **Import plugin from manifest...**
-2. Select `plugin/manifest.json` from this skill directory
-3. The plugin "Craw Figma Connector" now appears in your plugins
-
-#### Start the local connector
+### 4. Start the connector + run the plugin
 
 ```bash
+# Terminal 1: Start the local WebSocket server
 node scripts/figma_connector.js
 # → Listening on ws://localhost:9199
-# → HTTP health check on :9200
 ```
 
-#### Run the plugin
+In Figma Desktop:
+- Right-click canvas → **Plugins** → **Craw Figma Connector**
+- The panel shows **Connected to Craw** when the WebSocket connects
 
-4. In Figma Desktop: right-click canvas → **Plugins** → **Craw Figma Connector**
-5. A panel opens showing **Connected to Craw** when the WebSocket connects
-
-### 4. Send commands
+### 5. Send write commands
 
 ```bash
-# List current selection
-node scripts/figma_send.js getSelection
-
 # Create a rectangle
 node scripts/figma_send.js createRectangle \
   --payload '{"x":100,"y":100,"width":400,"height":300,"fillColor":{"r":0.14,"g":0.49,"b":1},"cornerRadius":12,"name":"Hero Card"}'
 
-# Create a frame
-node scripts/figma_send.js createFrame \
-  --payload '{"x":50,"y":50,"width":1440,"height":900,"name":"Desktop Canvas","fillColor":{"r":0.04,"g":0.04,"b":0.09}}'
-
-# Add text
-node scripts/figma_send.js createText \
-  --payload '{"x":200,"y":200,"characters":"GET IN TOUCH","fontName":{"family":"Inter","style":"Bold"},"fontSize":64,"fillColor":{"r":1,"g":1,"b":1}}'
-
-# Update a node
-node scripts/figma_send.js updateNode \
-  --payload '{"id":"1234:5678","x":300,"y":150,"name":"Updated Layer"}'
-
-# Delete a node
-node scripts/figma_send.js deleteNode \
-  --payload '{"id":"1234:5678"}'
-
-# Change fill color
-node scripts/figma_send.js setFillColor \
-  --payload '{"id":"1234:5678","color":{"r":0.14,"g":0.49,"b":1},"opacity":0.85}'
-
-# Group selection
-node scripts/figma_send.js groupSelection
+# Get current selection
+node scripts/figma_send.js getSelection
 ```
 
-## Available Commands (Write)
+## Available Commands
 
-| Command | Description |
-|---------|-------------|
-| `createRectangle` | Create a rectangle with position, size, fill, corner radius |
-| `createFrame` | Create a frame (canvas/artboard) |
-| `createEllipse` | Create an ellipse/circle |
-| `createText` | Create a text layer with font, size, content |
-| `selectNode` | Select a node by ID and zoom into it |
-| `updateNode` | Move, resize, or rename a node |
-| `deleteNode` | Remove a node |
-| `getSelection` | List selected nodes with position/size |
-| `getPageInfo` | Get current page name, id, child count |
-| `setFillColor` | Set fill color on any node |
-| `groupSelection` | Group selected nodes into a frame group |
+### Write (Plugin — real-time in Figma Desktop)
 
-## Available Actions (Read — Figma REST API)
+| Command | Payload (JSON) | Description |
+|---------|---------------|-------------|
+| `createRectangle` | `{x, y, width, height, fillColor?, cornerRadius?, name?}` | New rectangle |
+| `createFrame` | `{x, y, width, height, fillColor?, name?}` | New frame/artboard |
+| `createEllipse` | `{x, y, width, height, fillColor?, name?}` | New ellipse |
+| `createText` | `{x, y, characters, fontSize?, fontName?, fillColor?, name?}` | New text layer |
+| `selectNode` | `{id}` | Select + zoom into node |
+| `updateNode` | `{id, x?, y?, resize?{width,height}, fillColor?, name?}` | Modify existing node |
+| `deleteNode` | `{id}` | Remove node |
+| `setFillColor` | `{id, color{r,g,b}, opacity?}` | Set fill color |
+| `groupSelection` | `{}` | Group selected nodes |
+| `getSelection` | `{}` | List selected nodes |
+| `getPageInfo` | `{}` | Current page info |
 
-| Action | Description |
-|--------|-------------|
-| `get-file` | Get complete file document tree |
-| `get-file-nodes` | Get specific nodes by ID |
-| `get-styles` | List published styles (colors, text, effects) |
-| `get-components` | List published components |
-| `get-versions` | List file version history |
-| `render-images` | Get temporary image URLs for nodes |
-| `get-image-fills` | Get image fill URLs used in file |
-| `get-metadata` | Get lightweight file metadata |
-| `me` | Get current user info |
+### Read (REST API)
 
-## Design Token Extraction
+| Action | Args | Description |
+|--------|------|-------------|
+| `get-file` | `<key> [--depth N]` | Full file document tree |
+| `get-file-nodes` | `<key> <id>...` | Specific nodes by ID |
+| `get-styles` | `<key>` | Published styles (color, text, effects) |
+| `get-components` | `<key>` | Published components |
+| `get-versions` | `<key>` | Version history |
+| `render-images` | `<key> <id> [--format png\|svg\|pdf] [--scale N]` | Export as images |
+| `get-image-fills` | `<key>` | Image fill URLs used in file |
+| `get-metadata` | `<key>` | Lightweight file info |
+| `me` | — | Current user info |
 
-```bash
-# Extract all colors and typography
-node scripts/figma_client.mjs get-styles <file-key>
+### Analysis
 
-# Export frame as PNG @2x
-node scripts/figma_client.mjs render-images <file-key> <node-id> --format png --scale 2
+| Action | Args | Description |
+|--------|------|-------------|
+| `style_auditor.mjs` | `<key> [--brand-colors "#HEX,#HEX"] [--generate-css]` | Analyze colors, fonts, consistency, CSS tokens |
+| `accessibility_checker.mjs` | `<key> [--level AA\|AAA] [--format json\|report]` | WCAG contrast, touch targets, font sizes |
+
+## Color Format
+
+Figma uses RGB in 0–1 range:
+```json
+{"r": 0.14, "g": 0.49, "b": 1}     // #247DFF (blue)
+{"r": 1, "g": 0.42, "b": 0.21}      // #FF6B35 (orange)
+{"r": 1, "g": 1, "b": 1}            // #FFFFFF (white)
 ```
 
-## Tips & Workflow
+## Auto-setup for AI Agents
 
-- Keep the connector (`figma_connector.js`) running in a terminal
-- The plugin auto-reconnects if the connector restarts
-- Pending commands are queued if the plugin is offline and sent when it reconnects
-- For batches: send multiple `figma_send.js` calls sequentially
+When a user installs this skill, the AI agent should:
+1. Check if `FIGMA_ACCESS_TOKEN` is set — if not, instruct the user to generate one and export it
+2. For write operations, check if the Figma plugin is installed — if not:
+   - Guide the user through importing `plugin/manifest.json` in Figma Desktop
+   - Suggest running `node scripts/figma_connector.js` separately
+   - Offer to run `figma_connector.js` if the agent has shell access
+3. Test connectivity with `figma_client.mjs me` before proceeding
+
+## Tips
+
+- Keep `figma_connector.js` running while working with write commands
+- The plugin auto-reconnects if the connector restarts (3s retry)
+- Commands sent while the plugin is offline are queued and sent on reconnect
+- Health check: `http://localhost:9200` shows status and pending queue
+- Use `--generate-css` to extract Figma styles as CSS custom properties
 
 ## Files
 
 ```
-scripts/figma_connector.js    — Local WebSocket server (run this)
-scripts/figma_send.js         — Send commands to Figma plugin
-scripts/figma_client.mjs      — Read Figma via REST API
-plugin/manifest.json          — Figma plugin manifest
-plugin/code.ts                — Plugin main code
-plugin/ui.html                — Plugin panel UI
+skills/craw-figma/
+├── SKILL.md
+├── scripts/
+│   ├── figma_client.mjs          — Figma REST API client (read)
+│   ├── figma_connector.js        — Local WebSocket server (run this)
+│   ├── figma_send.js             — Send commands to Figma plugin
+│   ├── style_auditor.mjs         — Design system analysis
+│   └── accessibility_checker.mjs — WCAG compliance
+├── plugin/
+│   ├── manifest.json             — Figma plugin manifest
+│   ├── code.ts                   — Plugin code (TypeScript)
+│   └── ui.html                   — Plugin panel UI
+└── references/
+    ├── figma-api-reference.md    — REST API docs
+    └── design-patterns.md        — UI patterns & best practices
 ```

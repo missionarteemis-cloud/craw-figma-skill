@@ -1,0 +1,25 @@
+{
+  "name": "craw-figma-skill",
+  "version": "1.0.0",
+  "description": "Bidirectional Figma integration for AI agents. Read and analyze designs via the Figma REST API; create and modify layers in real time via a local WebSocket connector + Figma plugin.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/missionarteemis-cloud/craw-figma-skill.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/missionarteemis-cloud/craw-figma-skill/issues"
+  },
+  "homepage": "https://github.com/missionarteemis-cloud/craw-figma-skill#readme",
+  "devDependencies": {
+    "@figma/plugin-typings": "^1.128.0",
+    "typescript": "^6.0.3"
+  }
+}
