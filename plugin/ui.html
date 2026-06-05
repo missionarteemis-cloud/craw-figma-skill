@@ -37,7 +37,6 @@
   .log p.cmd { color: #64b5f6; }
   .log p.done { color: var(--green); }
   .log p.err { color: var(--red); }
-  .log p.msg { color: var(--accent); font-style: italic; background: rgba(124,92,252,0.08); }
 </style>
 </head>
 <body>
@@ -66,31 +65,73 @@
     var CONNECTOR = 'http://localhost:9199';
     var connected = false;
 
-    function checkHealth() {
-      var xhr = new XMLHttpRequest();
-      xhr.open('GET', CONNECTOR + '/health?t=' + Date.now(), true);
-      xhr.timeout = 3000;
-      xhr.onload = function() {
-        if (xhr.status === 200) {
-          if (!connected) {
-            connected = true;
-            dot.className = 'dot connected';
-            statusText.textContent = 'Connected to Craw';
-          }
-        } else {
-          connected = false;
-          dot.className = 'dot';
-          statusText.textContent = 'Disconnected';
-        }
-      };
-      xhr.onerror = function() {
-        connected = false;
-        dot.className = 'dot';
-        statusText.textContent = 'Disconnected';
-      };
-      xhr.send();
+    function addLog(t, c) {
+      var p = document.createElement('p');
+      p.className = c || '';
+      p.textContent = t;
+      logEl.appendChild(p);
+      logEl.scrollTop = logEl.scrollHeight;
     }
 
+    function sendToPlugin(m) {
+      parent.postMessage({ pluginMessage: m }, '*');
+    }
+
+    function get(url, cb) {
+      var x = new XMLHttpRequest();
+      x.open('GET', url, true);
+      x.timeout = 5000;
+      x.onload = function() {
+        try { cb(null, JSON.parse(x.responseText)); }
+        catch(e) { cb(null, null); }
+      };
+      x.onerror = function(e) { cb(e, null); };
+      x.send();
+    }
+
+    function post(url, b, cb) {
+      var x = new XMLHttpRequest();
+      x.open('POST', url, true);
+      x.setRequestHeader('Content-Type', 'application/json');
+      x.timeout = 5000;
+      x.onload = function() {
+        try { cb(null, JSON.parse(x.responseText)); }
+        catch(e) { cb(null, null); }
+      };
+      x.onerror = function(e) { cb(e, null); };
+      x.send(b);
+    }
+
+    function checkHealth() {
+      get(CONNECTOR + '/health?t=' + Date.now(), function(err, data) {
+        if (err || !data) {
+          if (connected) {
+            connected = false;
+            dot.className = 'dot';
+            statusText.textContent = 'Disconnected';
+            addLog('\u26A0\uFE0F Disconnected', 'err');
+          }
+          return;
+        }
+        if (!connected) {
+          connected = true;
+          dot.className = 'dot connected';
+          statusText.textContent = 'Connected to Craw';
+          addLog('\uD83E\uDD80 Connected to Craw', '');
+        }
+      });
+    }
+
+    function pollCommand() {
+      get(CONNECTOR + '/next-command?t=' + Date.now(), function(err, data) {
+        if (err || !data) return;
+        if (data.command) {
+          sendToPlugin({ type: 'command', cmd: data.command });
+        }
+      });
+    }
+
+    // Handle messages from plugin code
     window.addEventListener('message', function(event) {
       var msg = event.data.pluginMessage || event.data;
       if (!msg) return;
@@ -112,11 +153,17 @@
         return;
       }
       if (msg.type === 'log') {
-        var p = document.createElement('p');
-        p.className = msg.level || '';
-        p.textContent = msg.text;
-        logEl.appendChild(p);
-        logEl.scrollTop = logEl.scrollHeight;
+        addLog(msg.text, msg.level);
+        return;
+      }
+      // Plugin wants to send command result to connector
+      if (msg.type === 'command-result') {
+        post(CONNECTOR + '/result', JSON.stringify({ id: msg.commandId, status: msg.status, data: msg.data }), function() {});
+        return;
+      }
+      // Plugin wants us to poll
+      if (msg.type === 'poll-command') {
+        pollCommand();
         return;
       }
     });

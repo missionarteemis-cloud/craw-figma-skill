@@ -1,8 +1,7 @@
 /// Craw Figma Connector — Plugin Code (ES5)
-/// HTTP polling architecture: plugin polls commands, executes them, sends results
+/// Polls commands via UI proxy (plugin -> postMessage -> UI -> XHR -> connector)
 
 var POLL_INTERVAL = 1500;
-var CONNECTOR = "http://localhost:9199";
 var pollTimer = null;
 var selectionTimer = null;
 
@@ -165,24 +164,6 @@ commands.groupSelection = function() {
   return result;
 };
 
-function pollNextCommand() {
-  var xhr = new XMLHttpRequest();
-  xhr.open("GET", CONNECTOR + "/next-command?t=" + Date.now(), true);
-  xhr.timeout = 5000;
-  xhr.onload = function() {
-    if (xhr.status === 200) {
-      try {
-        var data = JSON.parse(xhr.responseText);
-        if (data && data.command) {
-          executeCommand(data);
-        }
-      } catch(e) {}
-    }
-  };
-  xhr.onerror = function() {};
-  xhr.send();
-}
-
 function executeCommand(cmd) {
   var command = cmd.command;
   var payload = cmd.payload || {};
@@ -209,7 +190,7 @@ function executeCommand(cmd) {
       result.then(
         function(res) {
           var doneMsg = {};
-          doneMsg.text = "Done: " + JSON.stringify(res).slice(0, 80);
+          doneMsg.text = "Done";
           doneMsg.level = "done";
           postUI("log", doneMsg);
           sendResult(id, "ok", res);
@@ -224,7 +205,7 @@ function executeCommand(cmd) {
       );
     } else {
       var doneMsg = {};
-      doneMsg.text = "Done: " + JSON.stringify(result).slice(0, 80);
+      doneMsg.text = "Done";
       doneMsg.level = "done";
       postUI("log", doneMsg);
       sendResult(id, "ok", result);
@@ -239,23 +220,16 @@ function executeCommand(cmd) {
 }
 
 function sendResult(id, status, data) {
-  var resultPayload = {};
-  resultPayload.id = id;
-  resultPayload.status = status;
-  resultPayload.data = data;
-  var body = JSON.stringify(resultPayload);
-
-  var xhr = new XMLHttpRequest();
-  xhr.open("POST", CONNECTOR + "/result", true);
-  xhr.setRequestHeader("Content-Type", "application/json");
-  xhr.onload = function() {};
-  xhr.onerror = function() {};
-  xhr.send(body);
+  postUI("command-result", { commandId: id, status: status, data: data });
 }
 
 function startPolling() {
-  pollTimer = setInterval(pollNextCommand, POLL_INTERVAL);
-  setTimeout(pollNextCommand, 300);
+  // Ask UI to poll for next command every POLL_INTERVAL
+  function poll() {
+    postUI("poll-command", {});
+  }
+  pollTimer = setInterval(poll, POLL_INTERVAL);
+  setTimeout(poll, 300);
 }
 
 function startSelectionUpdates() {
@@ -296,5 +270,12 @@ figma.ui.onmessage = function(msg) {
     postUI("log", logMsg);
     startPolling();
     startSelectionUpdates();
+    return;
+  }
+
+  // UI forwarded a command from the connector
+  if (msg.type === "command") {
+    executeCommand(msg.cmd);
+    return;
   }
 };
