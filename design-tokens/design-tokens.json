@@ -1,0 +1,145 @@
+{
+  "craw-design-system": {
+    "$description": "Craw Design System — generic professional base. Extend per-project via $extensions.",
+    "$version": "0.1.0"
+  },
+
+  "color": {
+    "$description": "Neutral color palette. Projects override via $extensions."
+  },
+
+  "spacing": {
+    "$description": "Modular scale: 4× multiplier. Based on Refactoring UI & Material Design 3 guidelines.",
+    "xs":    { "$value": "4px",   "$type": "dimension" },
+    "sm":    { "$value": "8px",   "$type": "dimension" },
+    "md":    { "$value": "16px",  "$type": "dimension" },
+    "lg":    { "$value": "24px",  "$type": "dimension" },
+    "xl":    { "$value": "32px",  "$type": "dimension" },
+    "2xl":   { "$value": "48px",  "$type": "dimension" },
+    "3xl":   { "$value": "64px",  "$type": "dimension" },
+    "4xl":   { "$value": "96px",  "$type": "dimension" },
+    "section": {
+      "$value": "64px",
+      "$type": "dimension",
+      "$description": "Default section padding top/bottom"
+    },
+    "gutter": {
+      "$value": "24px",
+      "$type": "dimension",
+      "$description": "Page edge padding on mobile"
+    }
+  },
+
+  "border-radius": {
+    "$description": "Corner radii. rounded-sm for functional UI, rounded-lg for cards/containers.",
+    "none":    { "$value": "0px",    "$type": "dimension" },
+    "sm":      { "$value": "4px",    "$type": "dimension" },
+    "md":      { "$value": "8px",    "$type": "dimension" },
+    "lg":      { "$value": "12px",   "$type": "dimension" },
+    "xl":      { "$value": "16px",   "$type": "dimension" },
+    "full":    { "$value": "9999px", "$type": "dimension", "$description": "Pill/pills" }
+  },
+
+  "typography": {
+    "$description": "Modular scale: 1.25 (Major Third). Base 16px.",
+    "font-family": {
+      "ui":     { "$value": "Inter, system-ui, sans-serif", "$type": "fontFamily" },
+      "display":  { "$value": "Inter, system-ui, sans-serif", "$type": "fontFamily" },
+      "mono":     { "$value": "JetBrains Mono, monospace",    "$type": "fontFamily" },
+      "heading":  { "$value": "Inter, system-ui, sans-serif", "$type": "fontFamily", "$description": "Override per font decorativi (es. DR's Lab: Saint, FreeFat)" }
+    },
+    "weight": {
+      "light":    { "$value": "300", "$type": "fontWeight" },
+      "regular":  { "$value": "400", "$type": "fontWeight" },
+      "medium":   { "$value": "500", "$type": "fontWeight" },
+      "semibold": { "$value": "600", "$type": "fontWeight" },
+      "bold":     { "$value": "700", "$type": "fontWeight" },
+      "black":    { "$value": "900", "$type": "fontWeight" }
+    },
+    "size": {
+      "xs":      { "$value": "12px",  "$type": "fontSize" },
+      "sm":      { "$value": "14px",  "$type": "fontSize" },
+      "base":    { "$value": "16px",  "$type": "fontSize", "$description": "Body text" },
+      "lg":      { "$value": "20px",  "$type": "fontSize" },
+      "xl":      { "$value": "24px",  "$type": "fontSize" },
+      "2xl":     { "$value": "32px",  "$type": "fontSize" },
+      "3xl":     { "$value": "40px",  "$type": "fontSize" },
+      "4xl":     { "$value": "48px",  "$type": "fontSize" },
+      "5xl":     { "$value": "64px",  "$type": "fontSize" },
+      "6xl":     { "$value": "80px",  "$type": "fontSize" }
+    },
+    "line-height": {
+      "tight":   { "$value": "1.1", "$type": "number" },
+      "normal":  { "$value": "1.5", "$type": "number" },
+      "relaxed": { "$value": "1.75", "$type": "number" }
+    },
+    "letter-spacing": {
+      "tight":   { "$value": "-0.02em", "$type": "number" },
+      "normal":  { "$value": "0em",     "$type": "number" },
+      "wide":    { "$value": "0.05em",  "$type": "number" }
+    }
+  },
+
+  "elevation": {
+    "$description": "Shadow system. low=cards, medium=modals/dropdowns, high=FABs/tooltips.",
+    "none":   { "$value": [], "$type": "shadow" },
+    "low":    {
+      "$value": [
+        { "offsetX": 0, "offsetY": 1, "radius": 3, "color": "#0000001a", "blendMode": "normal" }
+      ],
+      "$type": "shadow"
+    },
+    "medium": {
+      "$value": [
+        { "offsetX": 0, "offsetY": 4, "radius": 8, "color": "#00000026", "blendMode": "normal" },
+        { "offsetX": 0, "offsetY": 2, "radius": 4, "color": "#0000000d", "blendMode": "normal" }
+      ],
+      "$type": "shadow"
+    },
+    "high": {
+      "$value": [
+        { "offsetX": 0, "offsetY": 8, "radius": 24, "color": "#00000033", "blendMode": "normal" },
+        { "offsetX": 0, "offsetY": 4, "radius": 8,  "color": "#0000001a", "blendMode": "normal" }
+      ],
+      "$type": "shadow"
+    }
+  },
+
+  "opacity": {
+    "$description": "Consistent opacity levels for overlays, disabled states, scrims.",
+    "disabled": { "$value": 0.38, "$type": "number" },
+    "subtle":   { "$value": 0.08, "$type": "number", "$description": "Hover/selected backgrounds" },
+    "scrim":    { "$value": 0.4,  "$type": "number", "$description": "Modal backdrop" },
+    "muted":    { "$value": 0.6,  "$type": "number", "$description": "Secondary text on dark" }
+  },
+
+  "icon": {
+    "$description": "Icon sizing standards. Based on Refactoring UI (avoid scaling small icons to large).",
+    "sizes": {
+      "sm":  { "$value": "16px", "$type": "dimension", "$description": "Inline icons, 16-18px" },
+      "md":  { "$value": "24px", "$type": "dimension", "$description": "Standard UI icons" },
+      "lg":  { "$value": "32px", "$type": "dimension", "$description": "Feature icons" },
+      "xl":  { "$value": "48px", "$type": "dimension", "$description": "Hero/decorative" }
+    },
+    "stroke": {
+      "thin":  { "$value": "1.5px", "$type": "strokeWeight" },
+      "bold":  { "$value": "2px",   "$type": "strokeWeight" }
+    }
+  },
+
+  "motion": {
+    "$description": "Duration and easing tokens for transitions.",
+    "duration": {
+      "instant": { "$value": "100ms", "$type": "duration" },
+      "fast":    { "$value": "200ms", "$type": "duration" },
+      "normal":  { "$value": "300ms", "$type": "duration" },
+      "slow":    { "$value": "500ms", "$type": "duration" }
+    },
+    "easing": {
+      "linear":  { "$value": [0, 0, 1, 1], "$type": "cubicBezier" },
+      "in-out":  { "$value": [0.4, 0, 0.2, 1], "$type": "cubicBezier" },
+      "out":     { "$value": [0, 0, 0.2, 1], "$type": "cubicBezier" },
+      "spring":  { "$value": [0.34, 1.56, 0.64, 1], "$type": "cubicBezier", "$description": "Bouncy but quick" }
+    }
+  }
+}
