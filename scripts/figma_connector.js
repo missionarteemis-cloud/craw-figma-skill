@@ -1,6 +1,12 @@
 #!/usr/bin/env node
 
 var http = require("http");
+
+// ── Log helpers with emoji ──
+function log() { console.log("  🦀", Array.prototype.join.call(arguments, " ")); }
+function logCmd(cmd) { console.log("  ⚡", cmd.command || "?", "—", cmd.payload ? (cmd.payload.name || "") : ""); }
+function logTimeout(id, cmd) { console.log("  ⏰ TIMEOUT", id, "—", cmd.command || "?", "(" + CMD_TIMEOUT + "ms)"); }
+function logServer(port) { console.log("\n  🦀━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"); console.log("  🦀  OpenFigma Connector — ready"); console.log("  🦀  http://localhost:" + port); console.log("  🦀━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"); }
 var PORT = 9199;
 var args = process.argv.slice(2);
 for (var i = 0; i < args.length; i++) {
@@ -33,14 +39,15 @@ var server = http.createServer(function(req, res) {
   // Send command to plugin (used by figma_send.js and Craw)
   if (path === "/send-command") {
     readBody(req, function(body) {
-      try { var cmd = JSON.parse(body); } catch(e) { res.writeHead(400); res.end("Invalid JSON"); return; }
+      try { var cmd = JSON.parse(body); } catch(e) { console.log("  ❌ Invalid JSON"); res.writeHead(400); res.end("Invalid JSON"); return; }
+      logCmd(cmd);
       cmd.timestamp = Date.now();
       pendingQueue.push(cmd);
 
       var id = cmd.id || Date.now().toString(36);
       var CMD_TIMEOUT = parseInt(process.env.FIGMA_CMD_TIMEOUT, 10) || 30000;
       var timeout = setTimeout(function() {
-        console.log('[figma-connector] TIMEOUT (' + CMD_TIMEOUT + 'ms) — command: ' + id + ' (' + (cmd.command || 'unknown') + ')');
+        logTimeout(id, cmd);
         delete resultStore[id];
         res.writeHead(200, { "Content-Type": "application/json" });
         res.end(JSON.stringify({ id: id, status: "timeout", data: null }));
@@ -144,7 +151,7 @@ function readBody(req, cb) {
 }
 
 server.listen(PORT, function() {
-  console.log("[" + new Date().toISOString() + "] Craw Figma Connector on http://localhost:" + PORT);
+  logServer(PORT);
 });
 
 process.on("SIGINT", function() {
