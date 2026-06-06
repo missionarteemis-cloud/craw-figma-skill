@@ -28,11 +28,11 @@
       "mono":     { "$value": "'LoRes9PlusOTNarrow', monospace", "$type": "fontFamily" }
     },
     "figma": {
-      "$description": "Font families installed on macOS — real internal PostScript names.",
-      "display":  { "$value": "Saint", "$type": "fontFamily", "$description": "Editorial display — Figma name: Saint" },
-      "heading":  { "$value": "FREE FAT FONT", "$type": "fontFamily", "$description": "Bold emphatic — Figma name: FREE FAT FONT" },
-      "ui":       { "$value": "LoRes 9 Plus OT Narrow", "$type": "fontFamily", "$description": "Retro UI — Figma name: LoRes 9 Plus OT Narrow" },
-      "mono":     { "$value": "LoRes 9 Plus OT Narrow", "$type": "fontFamily" }
+      "$description": "Figma-ready fonts (Inter, JetBrains Mono — always available). Custom fonts (LoRes, Saint, FreeFat) are for CSS/export only.",
+      "display":  { "$value": "Inter", "$type": "fontFamily", "$description": "Editorial — Inter in Figma, Saint on web" },
+      "heading":  { "$value": "Inter", "$type": "fontFamily", "$description": "Bold — Inter in Figma, FreeFat on web" },
+      "ui":       { "$value": "Inter", "$type": "fontFamily", "$description": "UI — Inter in Figma, LoRes on web" },
+      "mono":     { "$value": "JetBrains Mono", "$type": "fontFamily" }
     }
   },
 
