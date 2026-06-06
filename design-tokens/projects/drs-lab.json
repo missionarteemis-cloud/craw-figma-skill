@@ -36,7 +36,7 @@
     },
     "style": {
       "$description": "Font styles as Figma shows them.",
-      "ui": { "$value": "Narrow Regular", "$type": "string", "$description": "LoRes 9 Plus OT > Narrow Regular in Figma dropdown" }
+      "ui": { "$value": "", "$type": "string", "$description": "Empty style — PostScript name includes weight (LoRes9PlusOTNarrow-Regular)" }
     }
   },
 

@@ -208,7 +208,7 @@ function loadDefaultFonts() {
     { family: 'JetBrains Mono', style: 'Regular' },
     { family: 'JetBrains Mono', style: 'Bold' },
     // DR's Lab custom fonts — exact Figma dropdown names (verified manually)
-    { family: 'LoRes 9 Plus OT', style: 'Narrow Regular' },
+    { family: 'LoRes9PlusOTNarrow-Regular', style: '' },
     { family: 'Saint', style: 'Regular' },
     { family: 'FREE FAT FONT', style: 'Regular' },
   ];

@@ -398,7 +398,7 @@ builders.button = function(params) {
   // Figma-compatible font
   var fontFamilyRaw = getToken('typography.figma.ui', null) || getToken('typography.font-family.ui', 'Inter');
   var fontFamily = fontFamilyRaw.split(',')[0].replace(/['"]/g, '').trim();
-  var fontStyle = getToken('typography.figma.style.ui', null) || 'Regular';
+  var fontStyle = getToken('typography.figma.style.ui', null) || '';
   
   // Clean fills
   function makeFill(color) {
