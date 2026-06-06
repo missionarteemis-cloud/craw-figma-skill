@@ -33,6 +33,10 @@
       "heading":  { "$value": "FREE FAT FONT", "$type": "fontFamily", "$description": "Displays as 'FREE FAT FONT' in Figma dropdown" },
       "ui":       { "$value": "LoRes 9 Plus OT", "$type": "fontFamily", "$description": "Displays as 'LoRes 9 Plus OT' in Figma dropdown (no 'Narrow')" },
       "mono":     { "$value": "JetBrains Mono", "$type": "fontFamily" }
+    },
+    "style": {
+      "$description": "Font styles as Figma shows them.",
+      "ui": { "$value": "Narrow Regular", "$type": "string", "$description": "LoRes 9 Plus OT > Narrow Regular in Figma dropdown" }
     }
   },
 

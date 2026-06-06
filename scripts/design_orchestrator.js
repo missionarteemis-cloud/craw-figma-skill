@@ -344,6 +344,7 @@ builders.button = function(params) {
   // Figma-compatible font
   var fontFamilyRaw = getToken('typography.figma.ui', null) || getToken('typography.font-family.ui', 'Inter');
   var fontFamily = fontFamilyRaw.split(',')[0].replace(/['"]/g, '').trim();
+  var fontStyle = getToken('typography.figma.style.ui', null) || 'Regular';
   
   // Clean fills
   function makeFill(color) {
@@ -376,7 +377,7 @@ builders.button = function(params) {
           y: y + paddingV,
           characters: label.toUpperCase(),
           fontSize: fontSize,
-          fontName: { family: fontFamily, style: 'Regular' },
+          fontName: { family: fontFamily, style: fontStyle },
           fills: makeFill(accentColor),
           letterSpacing: { value: 0.08, unit: 'PERCENT' }
         }
@@ -406,7 +407,7 @@ builders.button = function(params) {
           y: y + paddingV,
           characters: label.toUpperCase(),
           fontSize: fontSize,
-          fontName: { family: fontFamily, style: 'Regular' },
+          fontName: { family: fontFamily, style: fontStyle },
           fills: makeFill({ r: 1, g: 1, b: 1 }),
           letterSpacing: { value: 0.08, unit: 'PERCENT' }
         }
