@@ -4,9 +4,7 @@
   "api": "1.0.0",
   "main": "code.js",
   "ui": "ui.html",
-  "icon": "icon.png",
   "editorType": ["figma"],
-  "description": "AI-powered Figma design connector. Create shapes, auto-layout, boolean operations, and vector networks from AI agents.",
   "capabilities": ["code", "network"],
   "networkAccess": {
     "allowedDomains": ["http://localhost:9199"],
