@@ -4,10 +4,5 @@
   "api": "1.0.0",
   "main": "code.js",
   "ui": "ui.html",
-  "editorType": ["figma"],
-  "capabilities": ["code", "network"],
-  "networkAccess": {
-    "allowedDomains": ["http://localhost:9199"],
-    "reasoning": "Required to communicate with local figma_connector.js HTTP server"
-  }
+  "editorType": ["figma"]
 }
