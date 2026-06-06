@@ -247,8 +247,8 @@ commands.createText = function(p) {
   if (p.textAlignHorizontal) text.textAlignHorizontal = p.textAlignHorizontal;
   if (p.fontName) text.fontName = p.fontName;
   if (p.letterSpacing) {
-    if (typeof p.letterSpacing === 'number') { text.letterSpacing = p.letterSpacing; }
-    else if (p.letterSpacing.value !== undefined) { text.letterSpacing = p.letterSpacing.value; }
+    if (typeof p.letterSpacing === 'number') { text.letterSpacing = { value: p.letterSpacing, unit: 'PIXELS' }; }
+    else if (p.letterSpacing.value !== undefined) { text.letterSpacing = p.letterSpacing; }
   }
   if (p.lineHeight) text.lineHeight = p.lineHeight;
   if (p.textAutoResize) text.textAutoResize = p.textAutoResize;
