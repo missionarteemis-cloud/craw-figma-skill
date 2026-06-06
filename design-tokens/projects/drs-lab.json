@@ -28,15 +28,15 @@
       "mono":     { "$value": "'LoRes9PlusOTNarrow', monospace", "$type": "fontFamily" }
     },
     "figma": {
-      "$description": "Fonts as Figma sees them (checked manually by Diego).",
-      "display":  { "$value": "Saint", "$type": "fontFamily", "$description": "Displays as 'Saint' in Figma dropdown" },
-      "heading":  { "$value": "FREE FAT FONT", "$type": "fontFamily", "$description": "Displays as 'FREE FAT FONT' in Figma dropdown" },
-      "ui":       { "$value": "LoRes9PlusOTNarrow-Regular", "$type": "fontFamily", "$description": "PostScript name — Figma Plugin API needs this + empty style" },
+      "$description": "Figma-safe fonts (Inter, JetBrains Mono). Custom fonts (LoRes, Saint, FreeFat) for CSS/export only.",
+      "display":  { "$value": "Inter", "$type": "fontFamily", "$description": "Inter in Figma, Saint on web/export" },
+      "heading":  { "$value": "Inter", "$type": "fontFamily", "$description": "Inter in Figma, FreeFat on web/export" },
+      "ui":       { "$value": "Inter", "$type": "fontFamily", "$description": "Inter in Figma, LoRes on web/export" },
       "mono":     { "$value": "JetBrains Mono", "$type": "fontFamily" }
     },
     "style": {
-      "$description": "Font styles as Figma shows them.",
-      "ui": { "$value": "", "$type": "string", "$description": "Empty style — PostScript name includes weight (LoRes9PlusOTNarrow-Regular)" }
+      "$description": "Font styles for Figma.",
+      "ui": { "$value": "Regular", "$type": "string" }
     }
   },
 
