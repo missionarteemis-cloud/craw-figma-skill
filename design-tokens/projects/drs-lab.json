@@ -31,7 +31,7 @@
       "$description": "Fonts as Figma sees them (checked manually by Diego).",
       "display":  { "$value": "Saint", "$type": "fontFamily", "$description": "Displays as 'Saint' in Figma dropdown" },
       "heading":  { "$value": "FREE FAT FONT", "$type": "fontFamily", "$description": "Displays as 'FREE FAT FONT' in Figma dropdown" },
-      "ui":       { "$value": "LoRes 9 Plus OT", "$type": "fontFamily", "$description": "Displays as 'LoRes 9 Plus OT' in Figma dropdown (no 'Narrow')" },
+      "ui":       { "$value": "LoRes9PlusOTNarrow-Regular", "$type": "fontFamily", "$description": "PostScript name — Figma Plugin API needs this + empty style" },
       "mono":     { "$value": "JetBrains Mono", "$type": "fontFamily" }
     },
     "style": {
