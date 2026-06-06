@@ -312,6 +312,60 @@ builders.star = function(params) {
   }];
 };
 
+builders.phallus = function(params) {
+  var size = params.size || 120;
+  var pos = getNextPosition(size, size * 3);
+  var x = params.x || pos.x;
+  var y = params.y || pos.y;
+  var skinColor = resolveColor(params.color || '#dcb5a5');
+  var tipColor = { r: 0.82, g: 0.56, b: 0.65 }; // rosato
+  
+  var shaftW = size * 0.35;
+  var shaftH = size;
+  var tipW = shaftW * 1.25;
+  var tipH = tipW * 0.8;
+  
+  return [
+    {
+      command: "createRectangle",
+      payload: {
+        name: "Shaft",
+        x: x + (size * 0.65) / 2,
+        y: y + tipH * 0.5,
+        width: shaftW,
+        height: shaftH,
+        cornerRadius: tipW * 0.3,
+        fills: [{ type: "SOLID", color: cleanColorObj(skinColor), opacity: 1 }],
+        strokes: []
+      }
+    },
+    {
+      command: "createEllipse",
+      payload: {
+        name: "Tip",
+        x: x + (size - tipW) / 2,
+        y: y,
+        width: tipW,
+        height: tipH,
+        fills: [{ type: "SOLID", color: cleanColorObj(tipColor), opacity: 1 }],
+        strokes: []
+      }
+    },
+    {
+      command: "createEllipse",
+      payload: {
+        name: "Detail",
+        x: x + size * 0.45,
+        y: y + tipH * 0.6 + shaftH * 0.15,
+        width: shaftW * 0.25,
+        height: shaftW * 0.18,
+        fills: [{ type: "SOLID", color: cleanColorObj(tipColor), opacity: 0.5 }],
+        strokes: []
+      }
+    }
+  ];
+};
+
 builders.button = function(params) {
   var label = params.label || 'Button';
   var size = params.size || 160;
@@ -572,6 +626,8 @@ function parsePrompt(text) {
   } else if (text.includes('stell') || text.includes('star')) {
     params.shape = 'star';
     if (text.match(/(\d+)\s*punt/)) params.points = parseInt(text.match(/(\d+)\s*punt/)[1]);
+  } else if (text.includes('pisell') || text.includes('fall') || text.includes('phallus') || text.includes('cazz') || text.includes('pen') || text.includes('dick')) {
+    params.shape = 'phallus';
   } else if (text.includes('bott') || text.includes('button') || text.includes('pulsant')) {
     params.shape = 'button';
   } else {
