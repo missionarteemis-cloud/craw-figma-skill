@@ -5,8 +5,8 @@ var http = require("http");
 // ── Log helpers with emoji ──
 function log() { console.log("  🦀", Array.prototype.join.call(arguments, " ")); }
 function logCmd(cmd) { console.log("  ⚡", cmd.command || "?", "—", cmd.payload ? (cmd.payload.name || "") : ""); }
-function logTimeout(id, cmd) { console.log("  ⏰ TIMEOUT", id, "—", cmd.command || "?", "(" + CMD_TIMEOUT + "ms)"); }
-function logServer(port) { console.log("\n  🦀━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"); console.log("  🦀  OpenFigma Connector — ready"); console.log("  🦀  http://localhost:" + port); console.log("  🦀━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"); }
+function logTimeout(id, cmd, timeoutMs) { var ms = timeoutMs || 30000; console.log("  ⏰ TIMEOUT", id, "—", cmd.command || "?", "(" + ms + "ms)"); }
+function logServer(port) { console.log("\n  🦀━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"); console.log("  🦀  Craw Figma Connector — ready"); console.log("  🦀  http://localhost:" + port); console.log("  🦀━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"); }
 var PORT = 9199;
 var args = process.argv.slice(2);
 for (var i = 0; i < args.length; i++) {
@@ -47,7 +47,7 @@ var server = http.createServer(function(req, res) {
       var id = cmd.id || Date.now().toString(36);
       var CMD_TIMEOUT = parseInt(process.env.FIGMA_CMD_TIMEOUT, 10) || 30000;
       var timeout = setTimeout(function() {
-        logTimeout(id, cmd);
+        logTimeout(id, cmd, CMD_TIMEOUT);
         delete resultStore[id];
         res.writeHead(200, { "Content-Type": "application/json" });
         res.end(JSON.stringify({ id: id, status: "timeout", data: null }));
