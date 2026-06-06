@@ -74,6 +74,25 @@ var server = http.createServer(function(req, res) {
     return;
   }
 
+  // Plugin posts exported PNG as base64 — saves to disk
+  if (path === "/upload-png") {
+    readBody(req, function(body) {
+      try {
+        var d = JSON.parse(body);
+        var buf = Buffer.from(d.base64, 'base64');
+        var fname = '/tmp/' + (d.name || 'export') + '_' + Date.now() + '.png';
+        require('fs').writeFileSync(fname, buf);
+        log('Saved export:', fname, '(' + buf.length + ' bytes)');
+        res.writeHead(200, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ ok: true, file: fname, size: buf.length }));
+      } catch(e) {
+        res.writeHead(500);
+        res.end(JSON.stringify({ ok: false, error: e.message }));
+      }
+    });
+    return;
+  }
+
   // Plugin posts command result
   if (path === "/result") {
     readBody(req, function(body) {

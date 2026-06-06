@@ -161,6 +161,11 @@
         post(CONNECTOR + '/result', JSON.stringify({ id: msg.commandId, status: msg.status, data: msg.data }), function() {});
         return;
       }
+      // Plugin sends exported PNG as base64 via connector
+      if (msg.type === 'export-base64') {
+        post(CONNECTOR + '/upload-png', JSON.stringify({ id: msg.id, base64: msg.base64, format: msg.format, name: msg.name }), function() {});
+        return;
+      }
       // Plugin wants us to poll
       if (msg.type === 'poll-command') {
         pollCommand();

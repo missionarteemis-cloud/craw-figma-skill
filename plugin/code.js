@@ -595,6 +595,13 @@ commands.exportNode = function(p) {
   if (!node) throw new Error("Node not found: " + p.id);
   var settings = { format: p.format || "PNG", constraint: { type: "SCALE", value: p.scale || 1 } };
   if (p.contentsOnly !== undefined) settings.contentsOnly = p.contentsOnly;
+  if (p.asBase64) {
+    return node.exportAsync(settings).then(function(bytes) {
+      var b64 = figma.base64Encode(bytes);
+      postUI("export-base64", { commandId: "export-" + p.id, id: p.id, base64: b64, format: settings.format, name: node.name });
+      return { exported: true, format: settings.format, size: bytes.length, base64Sent: true };
+    });
+  }
   var bytes = node.exportAsync(settings);
   var result = {};
   result.exported = true; result.format = settings.format; result.size = bytes.length;
