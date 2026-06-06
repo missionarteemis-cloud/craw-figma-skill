@@ -231,6 +231,34 @@ function sendCommand(command, payload) {
 
 function wait(ms) { return new Promise(function(r) { setTimeout(r, ms); }); }
 
+// ── SMART POSITIONING ──
+// Never place on selection. Default: bottom-right of last created element.
+// Resets to (100, 100) every ~400px down to avoid going off-canvas.
+
+var LAST_X = 100;
+var LAST_Y = 100;
+var POSITION_COL = 0;
+var POSITION_ROW = 0;
+var GRID_COLS = 3;
+var GRID_CELL_W = 240;
+var GRID_CELL_H = 160;
+
+function getNextPosition(elementW, elementH) {
+  elementW = elementW || 200;
+  elementH = elementH || 100;
+  
+  var x = 100 + (POSITION_COL * (GRID_CELL_W + 20));
+  var y = 100 + (POSITION_ROW * (GRID_CELL_H + 20));
+  
+  POSITION_COL++;
+  if (POSITION_COL >= GRID_COLS) {
+    POSITION_COL = 0;
+    POSITION_ROW++;
+  }
+  
+  return { x: x, y: y };
+}
+
 // ── SHAPE BUILDERS ──
 
 var PROPORTIONS = getProportions();
@@ -239,8 +267,9 @@ var builders = {};
 
 builders.heart = function(params) {
   var size = params.size || parseInt(getToken('icon.sizes.xxl', '200'));
-  var x = params.x || 300;
-  var y = params.y || 300;
+  var pos = getNextPosition(size, size / 0.85);
+  var x = params.x || pos.x;
+  var y = params.y || pos.y;
   var color = resolveColor(params.color || 'red');
 
   var w = size;
@@ -270,8 +299,9 @@ builders.heart = function(params) {
 
 builders.star = function(params) {
   var size = params.size || parseInt(getToken('icon.sizes.lg', '150'));
-  var x = params.x || 300;
-  var y = params.y || 300;
+  var pos = getNextPosition(size, size);
+  var x = params.x || pos.x;
+  var y = params.y || pos.y;
   var points = params.points || 5;
   var color = resolveColor(params.color || 'gold');
   var fills = solidFill(color, 1);
@@ -285,8 +315,9 @@ builders.star = function(params) {
 builders.button = function(params) {
   var label = params.label || 'Button';
   var size = params.size || 160;
-  var x = params.x || 300;
-  var y = params.y || 300;
+  var pos = getNextPosition(size + 64, 48);
+  var x = params.x || pos.x;
+  var y = params.y || pos.y;
   var style = params.buttonStyle || 'filled'; // 'filled', 'outlined', 'ghost'
   
   // Colors from tokens
@@ -302,10 +333,10 @@ builders.button = function(params) {
   var mutedColor = mutedHex ? resolveColor(mutedHex) : { r: 0.35, g: 0.39, b: 0.47 };
   var borderColor = borderHex ? resolveColor(borderHex) : { r: 0.10, g: 0.13, b: 0.19 };
   
-  // Tokens-driven values
-  var borderRadius = parseInt(getToken('border-radius.md', '8'));
-  var paddingH = parseInt(getToken('spacing.md', '16'));
-  var paddingV = parseInt(getToken('spacing.sm', '10'));  // NotebookLM: modulare 4dp, genera spaziatura
+  // Tokens-driven values — grounded in NotebookLM / Refactoring UI / MD3
+  var borderRadius = parseInt(getToken('border-radius.md', '8'));  // Refactoring: modulare 4dp. MD3: forme morbide.
+  var paddingH = parseInt(getToken('spacing.lg', '32'));           // Refactoring: font Narrow richiede 32px H padding
+  var paddingV = parseInt(getToken('spacing.md', '14'));          // Refactoring: abbondante bianco, 12-16dp per 48dp target
   var fontSize = parseInt(getToken('typography.size.sm', '14'));
   var buttonH = fontSize + paddingV * 2;
   var buttonW = size + paddingH * 2;
