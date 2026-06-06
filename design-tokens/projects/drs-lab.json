@@ -28,10 +28,10 @@
       "mono":     { "$value": "'LoRes9PlusOTNarrow', monospace", "$type": "fontFamily" }
     },
     "figma": {
-      "$description": "Figma-ready fonts (Inter, JetBrains Mono — always available). Custom fonts (LoRes, Saint, FreeFat) are for CSS/export only.",
-      "display":  { "$value": "Inter", "$type": "fontFamily", "$description": "Editorial — Inter in Figma, Saint on web" },
-      "heading":  { "$value": "Inter", "$type": "fontFamily", "$description": "Bold — Inter in Figma, FreeFat on web" },
-      "ui":       { "$value": "Inter", "$type": "fontFamily", "$description": "UI — Inter in Figma, LoRes on web" },
+      "$description": "Fonts as Figma sees them (checked manually by Diego).",
+      "display":  { "$value": "Saint", "$type": "fontFamily", "$description": "Displays as 'Saint' in Figma dropdown" },
+      "heading":  { "$value": "FREE FAT FONT", "$type": "fontFamily", "$description": "Displays as 'FREE FAT FONT' in Figma dropdown" },
+      "ui":       { "$value": "LoRes 9 Plus OT", "$type": "fontFamily", "$description": "Displays as 'LoRes 9 Plus OT' in Figma dropdown (no 'Narrow')" },
       "mono":     { "$value": "JetBrains Mono", "$type": "fontFamily" }
     }
   },

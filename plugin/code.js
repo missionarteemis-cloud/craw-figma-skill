@@ -207,7 +207,10 @@ function loadDefaultFonts() {
     { family: 'Roboto', style: 'Medium' },
     { family: 'JetBrains Mono', style: 'Regular' },
     { family: 'JetBrains Mono', style: 'Bold' },
-    // Custom fonts (LoRes, Saint, FreeFat) used for CSS/export, not in Figma.
+    // DR's Lab custom fonts — exact Figma dropdown names (verified manually)
+    { family: 'LoRes 9 Plus OT', style: 'Regular' },
+    { family: 'Saint', style: 'Regular' },
+    { family: 'FREE FAT FONT', style: 'Regular' },
   ];
   var promises = [];
   for (var i = 0; i < fontPairs.length; i++) {
