@@ -1,0 +1,89 @@
+/**
+ * Do not edit directly, this file was auto-generated.
+ */
+
+:root {
+  --color-bg: #0a0f18; /** Deep navy-black background */
+  --color-bg-surface: #10151e; /** Card/surface background */
+  --color-border: #1a2030; /** Subtle borders */
+  --color-accent: #247dff; /** Primary accent blue (#247DFF) */
+  --color-accent-dim: #1459cc; /** Dimmed accent (#1459CC) */
+  --color-accent-glow: #247dff26; /** Glow/backdrop accent (rgba 36,125,255,0.15) */
+  --color-green: #3dba6e; /** Success/positive (#3DBA6E) */
+  --color-text: #e8eef5; /** Primary text on dark (#E8EEF5) */
+  --color-text-muted: #5a6478; /** Secondary/muted text (#5A6478) */
+  --typography-font-family-display: Inter, system-ui, sans-serif;
+  --typography-font-family-heading: Inter, system-ui, sans-serif; /** Override per font decorativi (es. DR's Lab: Saint, FreeFat) */
+  --typography-font-family-ui: Inter, system-ui, sans-serif;
+  --typography-font-family-mono: JetBrains Mono, monospace;
+  --typography-figma-display: Inter; /** Inter in Figma, Saint on web/export */
+  --typography-figma-heading: Inter; /** Inter in Figma, FreeFat on web/export */
+  --typography-figma-ui: Inter; /** Inter in Figma, LoRes on web/export */
+  --typography-figma-mono: JetBrains Mono;
+  --typography-style-ui: Regular;
+  --typography-weight-light: 300;
+  --typography-weight-regular: 400;
+  --typography-weight-medium: 500;
+  --typography-weight-semibold: 600;
+  --typography-weight-bold: 700;
+  --typography-weight-black: 900;
+  --typography-size-xs: 0.75rem;
+  --typography-size-sm: 0.875rem;
+  --typography-size-base: 1rem; /** Body text */
+  --typography-size-lg: 1.25rem;
+  --typography-size-xl: 1.5rem;
+  --typography-size-2xl: 2rem;
+  --typography-size-3xl: 2.5rem;
+  --typography-size-4xl: 3rem;
+  --typography-size-5xl: 4rem;
+  --typography-size-6xl: 5rem;
+  --typography-line-height-tight: 1.1;
+  --typography-line-height-normal: 1.5;
+  --typography-line-height-relaxed: 1.75;
+  --typography-letter-spacing-tight: -0.02em;
+  --typography-letter-spacing-normal: 0em;
+  --typography-letter-spacing-wide: 0.05em;
+  --spacing-section: 4rem; /** Default section padding top/bottom */
+  --spacing-xs: 0.25rem;
+  --spacing-sm: 0.5rem;
+  --spacing-md: 1rem;
+  --spacing-lg: 1.5rem;
+  --spacing-xl: 2rem;
+  --spacing-2xl: 3rem;
+  --spacing-3xl: 4rem;
+  --spacing-4xl: 6rem;
+  --spacing-gutter: 1.5rem; /** Page edge padding on mobile */
+  --effects-glow-accent: 0 0 20px #247DFF26, 0 0 40px #247DFF26; /** Accent glow box-shadow */
+  --border-radius-none: 0;
+  --border-radius-sm: 0.25rem;
+  --border-radius-md: 0.5rem;
+  --border-radius-lg: 0.75rem;
+  --border-radius-xl: 1rem;
+  --border-radius-full: 624.9375rem; /** Pill/pills */
+  --elevation-none: ;
+  --elevation-low: [object Object];
+  --elevation-medium: [object Object],[object Object];
+  --elevation-high: [object Object],[object Object];
+  --opacity-disabled: 0.38;
+  --opacity-subtle: 0.08; /** Hover/selected backgrounds */
+  --opacity-scrim: 0.4; /** Modal backdrop */
+  --opacity-muted: 0.6; /** Secondary text on dark */
+  --icon-sizes-sm: 1rem; /** Inline icons, 16-18px */
+  --icon-sizes-md: 1.5rem; /** Standard UI icons */
+  --icon-sizes-lg: 2rem; /** Feature icons */
+  --icon-sizes-xl: 3rem; /** Hero/decorative */
+  --icon-stroke-thin: 1.5px;
+  --icon-stroke-bold: 2px;
+  --proportions-heart-aspect-ratio: 0.85; /** Width/height ratio */
+  --proportions-heart-lobe-ratio: 0.55;
+  --proportions-heart-tip-ratio: 0.40;
+  --proportions-star-inner-ratio: 0.38; /** Inner/outer radius ratio for stars */
+  --motion-duration-instant: 100ms;
+  --motion-duration-fast: 200ms;
+  --motion-duration-normal: 300ms;
+  --motion-duration-slow: 500ms;
+  --motion-easing-linear: 0,0,1,1;
+  --motion-easing-in-out: 0.4,0,0.2,1;
+  --motion-easing-out: 0,0,0.2,1;
+  --motion-easing-spring: 0.34,1.56,0.64,1; /** Bouncy but quick */
+}

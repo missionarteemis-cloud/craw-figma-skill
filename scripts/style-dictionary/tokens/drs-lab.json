@@ -1,0 +1,121 @@
+{
+  "drs-lab": {
+    "comment": "DR's Lab \u2014 full project-specific design tokens. Matches the globals.css palette exactly."
+  },
+  "color": {
+    "bg": {
+      "value": "#0A0F18",
+      "type": "color",
+      "comment": "Deep navy-black background"
+    },
+    "bg-surface": {
+      "value": "#10151E",
+      "type": "color",
+      "comment": "Card/surface background"
+    },
+    "border": {
+      "value": "#1A2030",
+      "type": "color",
+      "comment": "Subtle borders"
+    },
+    "accent": {
+      "value": "#247DFF",
+      "type": "color",
+      "comment": "Primary accent blue (#247DFF)"
+    },
+    "accent-dim": {
+      "value": "#1459CC",
+      "type": "color",
+      "comment": "Dimmed accent (#1459CC)"
+    },
+    "accent-glow": {
+      "value": "#247DFF26",
+      "type": "color",
+      "comment": "Glow/backdrop accent (rgba 36,125,255,0.15)"
+    },
+    "green": {
+      "value": "#3DBA6E",
+      "type": "color",
+      "comment": "Success/positive (#3DBA6E)"
+    },
+    "text": {
+      "value": "#E8EEF5",
+      "type": "color",
+      "comment": "Primary text on dark (#E8EEF5)"
+    },
+    "text-muted": {
+      "value": "#5A6478",
+      "type": "color",
+      "comment": "Secondary/muted text (#5A6478)"
+    }
+  },
+  "typography": {
+    "font-family": {
+      "display": {
+        "value": "'Saint', serif",
+        "type": "fontFamily",
+        "comment": "Editorial display font"
+      },
+      "heading": {
+        "value": "'FreeFat', sans-serif",
+        "type": "fontFamily",
+        "comment": "Bold emphatic headings"
+      },
+      "ui": {
+        "value": "'LoRes9PlusOTNarrow', monospace",
+        "type": "fontFamily",
+        "comment": "UI labels/retro text"
+      },
+      "mono": {
+        "value": "'LoRes9PlusOTNarrow', monospace",
+        "type": "fontFamily"
+      }
+    },
+    "figma": {
+      "comment": "Figma-safe fonts (Inter, JetBrains Mono). Custom fonts (LoRes, Saint, FreeFat) for CSS/export only.",
+      "display": {
+        "value": "Inter",
+        "type": "fontFamily",
+        "comment": "Inter in Figma, Saint on web/export"
+      },
+      "heading": {
+        "value": "Inter",
+        "type": "fontFamily",
+        "comment": "Inter in Figma, FreeFat on web/export"
+      },
+      "ui": {
+        "value": "Inter",
+        "type": "fontFamily",
+        "comment": "Inter in Figma, LoRes on web/export"
+      },
+      "mono": {
+        "value": "JetBrains Mono",
+        "type": "fontFamily"
+      }
+    },
+    "style": {
+      "comment": "Font styles for Figma.",
+      "ui": {
+        "value": "Regular",
+        "type": "string"
+      }
+    }
+  },
+  "spacing": {
+    "section": {
+      "value": "80px",
+      "type": "dimension",
+      "comment": "DR's Lab uses more breathing room"
+    }
+  },
+  "effects": {
+    "comment": "DR's Lab specific effects.",
+    "glow": {
+      "accent": {
+        "value": "0 0 20px #247DFF26, 0 0 40px #247DFF26",
+        "type": "string",
+        "comment": "Accent glow box-shadow"
+      }
+    }
+  }
+}

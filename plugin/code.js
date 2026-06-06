@@ -24,6 +24,28 @@ function hasStrokes(node) { return "strokes" in node; }
 function hasEffects(node) { return "effects" in node; }
 function hasCornerRadius(node) { return "cornerRadius" in node; }
 
+// Helper: converts legacy fillColor + opacity to the fills[] format expected by the plugin
+// Supports both formats: fills[] or fillColor{r,g,b} + opacity
+function resolveFills(p) {
+  if (p.fills) return p.fills;
+  if (p.fillColor) {
+    var fill = { type: "SOLID", color: p.fillColor };
+    if (typeof p.opacity !== "undefined") fill.opacity = p.opacity;
+    return [fill];
+  }
+  return null;
+}
+// Helper: converts legacy strokeColor to strokes[]
+function resolveStrokes(p) {
+  if (p.strokes) return p.strokes;
+  if (p.strokeColor) {
+    var stroke = { type: "SOLID", color: p.strokeColor };
+    if (typeof p.opacity !== "undefined") stroke.opacity = p.opacity;
+    return [stroke];
+  }
+  return null;
+}
+
 var commands = {};
 
 // ── PRIMITIVE SHAPES ──
@@ -34,7 +56,8 @@ commands.createRectangle = function(p) {
   rect.y = typeof p.y !== "undefined" ? p.y : 0;
   rect.resize(typeof p.width !== "undefined" ? p.width : 200, typeof p.height !== "undefined" ? p.height : 100);
   if (p.cornerRadius && hasCornerRadius(rect)) rect.cornerRadius = p.cornerRadius;
-  if (p.fills && hasFills(rect)) rect.fills = p.fills;
+  var _fills = resolveFills(p);
+  if (_fills && hasFills(rect)) rect.fills = _fills;
   if (p.strokes && hasStrokes(rect)) rect.strokes = p.strokes;
   if (p.strokeWeight) rect.strokeWeight = p.strokeWeight;
   if (p.effects && hasEffects(rect)) rect.effects = p.effects;
@@ -52,14 +75,28 @@ commands.createFrame = function(p) {
   frame.x = typeof p.x !== "undefined" ? p.x : 0;
   frame.y = typeof p.y !== "undefined" ? p.y : 0;
   frame.resize(typeof p.width !== "undefined" ? p.width : 400, typeof p.height !== "undefined" ? p.height : 300);
-  if (p.fills && hasFills(frame)) frame.fills = p.fills;
+  var _fills = resolveFills(p);
+  if (_fills && hasFills(frame)) frame.fills = _fills;
   if (p.strokes && hasStrokes(frame)) frame.strokes = p.strokes;
   if (p.strokeWeight) frame.strokeWeight = p.strokeWeight;
   if (p.effects && hasEffects(frame)) frame.effects = p.effects;
   if (p.cornerRadius && hasCornerRadius(frame)) frame.cornerRadius = p.cornerRadius;
   if (p.name) frame.name = p.name;
-  // Auto layout
-  if (p.autoLayout) {
+  // Auto layout — direct properties (from auto_layout.js and shape_generator.js)
+  if (p.layoutMode) {
+    frame.layoutMode = p.layoutMode;
+    if (p.primaryAxisSizingMode) frame.primaryAxisSizingMode = p.primaryAxisSizingMode;
+    if (p.counterAxisSizingMode) frame.counterAxisSizingMode = p.counterAxisSizingMode;
+    if (typeof p.paddingLeft !== "undefined") frame.paddingLeft = p.paddingLeft;
+    if (typeof p.paddingRight !== "undefined") frame.paddingRight = p.paddingRight;
+    if (typeof p.paddingTop !== "undefined") frame.paddingTop = p.paddingTop;
+    if (typeof p.paddingBottom !== "undefined") frame.paddingBottom = p.paddingBottom;
+    if (typeof p.itemSpacing !== "undefined") frame.itemSpacing = p.itemSpacing;
+    if (p.primaryAxisAlignItems) frame.primaryAxisAlignItems = p.primaryAxisAlignItems;
+    if (p.counterAxisAlignItems) frame.counterAxisAlignItems = p.counterAxisAlignItems;
+  }
+  // Legacy autoLayout support
+  if (!p.layoutMode && p.autoLayout) {
     frame.layoutMode = p.autoLayout.mode || "NONE";
     if (p.autoLayout.padding) { frame.paddingLeft = p.autoLayout.padding; frame.paddingRight = p.autoLayout.padding; frame.paddingTop = p.autoLayout.padding; frame.paddingBottom = p.autoLayout.padding; }
     if (p.autoLayout.itemSpacing) frame.itemSpacing = p.autoLayout.itemSpacing;
@@ -77,7 +114,8 @@ commands.createEllipse = function(p) {
   ell.x = typeof p.x !== "undefined" ? p.x : 0;
   ell.y = typeof p.y !== "undefined" ? p.y : 0;
   ell.resize(typeof p.width !== "undefined" ? p.width : 100, typeof p.height !== "undefined" ? p.height : 100);
-  if (p.fills && hasFills(ell)) ell.fills = p.fills;
+  var _fills = resolveFills(p);
+  if (_fills && hasFills(ell)) ell.fills = _fills;
   if (p.strokes && hasStrokes(ell)) ell.strokes = p.strokes;
   if (p.strokeWeight) ell.strokeWeight = p.strokeWeight;
   if (p.effects && hasEffects(ell)) ell.effects = p.effects;
@@ -96,7 +134,8 @@ commands.createPolygon = function(p) {
   poly.y = typeof p.y !== "undefined" ? p.y : 0;
   poly.resize(typeof p.width !== "undefined" ? p.width : 100, typeof p.height !== "undefined" ? p.height : 100);
   poly.pointCount = typeof p.pointCount !== "undefined" ? p.pointCount : 3;
-  if (p.fills && hasFills(poly)) poly.fills = p.fills;
+  var _fills = resolveFills(p);
+  if (_fills && hasFills(poly)) poly.fills = _fills;
   if (p.strokes && hasStrokes(poly)) poly.strokes = p.strokes;
   if (p.strokeWeight) poly.strokeWeight = p.strokeWeight;
   if (p.effects && hasEffects(poly)) poly.effects = p.effects;
@@ -114,7 +153,8 @@ commands.createStar = function(p) {
   star.resize(typeof p.width !== "undefined" ? p.width : 100, typeof p.height !== "undefined" ? p.height : 100);
   star.pointCount = typeof p.pointCount !== "undefined" ? p.pointCount : 5;
   star.innerRadius = typeof p.innerRadius !== "undefined" ? p.innerRadius : 0.5;
-  if (p.fills && hasFills(star)) star.fills = p.fills;
+  var _fills = resolveFills(p);
+  if (_fills && hasFills(star)) star.fills = _fills;
   if (p.strokes && hasStrokes(star)) star.strokes = p.strokes;
   if (p.strokeWeight) star.strokeWeight = p.strokeWeight;
   if (p.effects && hasEffects(star)) star.effects = p.effects;
@@ -139,6 +179,11 @@ commands.createLine = function(p) {
   return result;
 };
 
+// Alias: createVectorNetwork calls createVector under the hood
+commands.createVectorNetwork = function(p) {
+  return commands.createVector(p);
+};
+
 commands.createVector = function(p) {
   // p.vertices = array of {x, y}
   // p.segments = array of {start, end, tangentStart?, tangentEnd?}
@@ -147,7 +192,8 @@ commands.createVector = function(p) {
   var vector = figma.createVector();
   vector.x = typeof p.x !== "undefined" ? p.x : 0;
   vector.y = typeof p.y !== "undefined" ? p.y : 0;
-  if (p.fills && hasFills(vector)) vector.fills = p.fills;
+  var _fills = resolveFills(p);
+  if (_fills && hasFills(vector)) vector.fills = _fills;
   if (p.strokes && hasStrokes(vector)) vector.strokes = p.strokes;
   if (p.strokeWeight) vector.strokeWeight = p.strokeWeight;
   if (p.effects && hasEffects(vector)) vector.effects = p.effects;
@@ -243,7 +289,8 @@ commands.createText = function(p) {
   
   if (p.name) text.name = p.name;
   if (p.fontSize) text.fontSize = p.fontSize;
-  if (p.fills && hasFills(text)) text.fills = p.fills;
+  var _fills = resolveFills(p);
+  if (_fills && hasFills(text)) text.fills = _fills;
   if (p.textAlignHorizontal) text.textAlignHorizontal = p.textAlignHorizontal;
   if (p.fontName) text.fontName = p.fontName;
   if (p.letterSpacing) {
@@ -344,7 +391,8 @@ commands.updateNode = function(p) {
   if (typeof p.x !== "undefined" && hasPosition(node)) node.x = p.x;
   if (typeof p.y !== "undefined" && hasPosition(node)) node.y = p.y;
   if (p.resize && hasResize(node)) node.resize(p.resize.width, p.resize.height);
-  if (p.fills && hasFills(node)) node.fills = p.fills;
+  var _fills = resolveFills(p);
+  if (_fills && hasFills(node)) node.fills = _fills;
   if (p.effects && hasEffects(node)) node.effects = p.effects;
   if (p.strokes && hasStrokes(node)) node.strokes = p.strokes;
   if (typeof p.strokeWeight !== "undefined") node.strokeWeight = p.strokeWeight;
@@ -353,6 +401,17 @@ commands.updateNode = function(p) {
   if (p.locked && "locked" in node) node.locked = p.locked;
   if (p.visible !== undefined && "visible" in node) node.visible = p.visible;
   if (p.name) node.name = p.name;
+  // Auto layout properties for updateNode (used by auto_layout.js applyAutoLayout)
+  if (p.layoutMode) node.layoutMode = p.layoutMode;
+  if (p.primaryAxisSizingMode) node.primaryAxisSizingMode = p.primaryAxisSizingMode;
+  if (p.counterAxisSizingMode) node.counterAxisSizingMode = p.counterAxisSizingMode;
+  if (typeof p.paddingLeft !== "undefined") node.paddingLeft = p.paddingLeft;
+  if (typeof p.paddingRight !== "undefined") node.paddingRight = p.paddingRight;
+  if (typeof p.paddingTop !== "undefined") node.paddingTop = p.paddingTop;
+  if (typeof p.paddingBottom !== "undefined") node.paddingBottom = p.paddingBottom;
+  if (typeof p.itemSpacing !== "undefined") node.itemSpacing = p.itemSpacing;
+  if (p.primaryAxisAlignItems) node.primaryAxisAlignItems = p.primaryAxisAlignItems;
+  if (p.counterAxisAlignItems) node.counterAxisAlignItems = p.counterAxisAlignItems;
   var result = {};
   result.id = node.id; result.name = node.name; result.updated = true;
   return result;
@@ -404,23 +463,41 @@ commands.groupSelection = function() {
 // ── BOOLEAN OPERATIONS ──
 
 commands.booleanOperation = function(p) {
-  var node = figma.getNodeById(p.id);
-  if (!node) throw new Error("Node not found: " + p.id);
-  var childCount = node.children ? node.children.length : 0;
-  if (childCount < 2) throw new Error("Need at least 2 children for boolean operation");
-  // Merge all children into one boolean group
-  var children = [];
-  for (var i = 0; i < node.children.length; i++) {
-    children.push(node.children[i]);
+  var nodes = [];
+  
+  // Support both single node (union children) and nodeIds array (union separate nodes)
+  if (p.nodeIds && p.nodeIds.length >= 2) {
+    for (var i = 0; i < p.nodeIds.length; i++) {
+      var n = figma.getNodeById(p.nodeIds[i]);
+      if (n) nodes.push(n);
+    }
+  } else if (p.id) {
+    var node = figma.getNodeById(p.id);
+    if (!node) throw new Error("Node not found: " + p.id);
+    if (node.children && node.children.length >= 2) {
+      for (var i = 0; i < node.children.length; i++) {
+        nodes.push(node.children[i]);
+      }
+    }
   }
-  var boolGroup = figma.union(children, node);
-  switch (p.operation) {
-    case "subtract": boolGroup.booleanOperation = "SUBTRACT"; break;
-    case "intersect": boolGroup.booleanOperation = "INTERSECT"; break;
-    case "exclude": boolGroup.booleanOperation = "EXCLUDE"; break;
-    case "union": default: boolGroup.booleanOperation = "UNION"; break;
+  
+  if (nodes.length < 2) throw new Error("Need at least 2 nodes for boolean operation");
+  
+  var parent = nodes[0].parent || figma.currentPage;
+  var boolGroup = figma.union(nodes, parent);
+  
+  var op = p.operation || "UNION";
+  switch (op.toUpperCase()) {
+    case "SUBTRACT": boolGroup.booleanOperation = "SUBTRACT"; break;
+    case "INTERSECT": boolGroup.booleanOperation = "INTERSECT"; break;
+    case "EXCLUDE": boolGroup.booleanOperation = "EXCLUDE"; break;
+    case "UNION": default: boolGroup.booleanOperation = "UNION"; break;
   }
+  
   if (p.name) boolGroup.name = p.name;
+  var _fills = resolveFills(p);
+  if (_fills && hasFills(boolGroup)) boolGroup.fills = _fills;
+  
   var result = {};
   result.id = boolGroup.id; result.name = boolGroup.name;
   result.booleanOperation = boolGroup.booleanOperation;
@@ -453,7 +530,8 @@ commands.createComponent = function(p) {
   comp.x = typeof p.x !== "undefined" ? p.x : 0;
   comp.y = typeof p.y !== "undefined" ? p.y : 0;
   comp.resize(typeof p.width !== "undefined" ? p.width : 200, typeof p.height !== "undefined" ? p.height : 200);
-  if (p.fills && hasFills(comp)) comp.fills = p.fills;
+  var _fills = resolveFills(p);
+  if (_fills && hasFills(comp)) comp.fills = _fills;
   if (p.effects && hasEffects(comp)) comp.effects = p.effects;
   if (p.name) comp.name = p.name;
   figma.currentPage.appendChild(comp);

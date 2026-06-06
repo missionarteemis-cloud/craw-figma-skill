@@ -1,5 +1,5 @@
 {
-  "name": "craw-figma",
+  "name": "style-dictionary",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
@@ -11,6 +11,6 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
-    "ws": "^8.21.0"
+    "style-dictionary": "^5.4.3"
   }
 }

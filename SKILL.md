@@ -86,6 +86,36 @@ node scripts/figma_send.js getSelection
 | `groupSelection` | `{}` | Group selected nodes |
 | `getSelection` | `{}` | List selected nodes |
 | `getPageInfo` | `{}` | Current page info |
+| `createPolygon` | `{x, y, width, height, pointCount, fillColor?, name?}` | Regular polygon (N sides) |
+| `createStar` | `{x, y, width, height, pointCount, innerRadius?, fillColor?, name?}` | Star shape |
+| `createVectorNetwork` | `{x, y, width, height, vectorNetwork: {vertices, segments}, fills?, strokes?}` | Custom vector path |
+| `booleanOperation` | `{operation: UNION|SUBTRACT|INTERSECT|EXCLUDE, nodeIds, name?, fillColor?}` | Union/subtract/intersect shapes |
+| `updateNode` (auto-layout) | `{id, layoutMode?, paddingLeft?, ..., itemSpacing?, primaryAxisAlignItems?, ...}` | Apply Auto Layout to frame |
+
+### Shape Generator (advanced)
+
+| Script | Description |
+|--------|-------------|
+| `node scripts/shape_generator.js test-basic` | Demo: rectangle, ellipse, polygon, star, heart in grid |
+| `node scripts/shape_generator.js test-union` | Demo: union of two overlapping circles |
+| `node scripts/shape_generator.js generate '{"type":"heart","width":200}'` | Single shape by type |
+
+### Auto Layout Module
+
+| Script | Description |
+|--------|-------------|
+| `node scripts/auto_layout.js card '{"width":320}'` | Create card with auto-layout |
+| `node scripts/auto_layout.js button '{"name":"CTA"}'` | Create button with padding |
+| `node scripts/auto_layout.js row '{"padding":8}'` | Horizontal row |
+| `node scripts/auto_layout.js column '{"padding":16}'` | Vertical column |
+
+### Style Dictionary Pipeline
+
+| Script | Description |
+|--------|-------------|
+| `cd scripts/style-dictionary && npx style-dictionary build` | Generate CSS variables + Figma tokens |
+| Output: `scripts/style-dictionary/build/variables.css` | DR's Lab CSS custom properties (`--color-*`, `--spacing-*`, etc.) |
+| Output: `scripts/style-dictionary/build/figma-tokens.json` | Figma-compatible nested tokens |
 
 ### Read (REST API)
 
@@ -134,6 +164,8 @@ When a user installs this skill, the AI agent should:
 - Commands sent while the plugin is offline are queued and sent on reconnect
 - Health check: `http://localhost:9200` shows status and pending queue
 - Use `--generate-css` to extract Figma styles as CSS custom properties
+- Command timeout defaults to 30s. Override: `FIGMA_CMD_TIMEOUT=60000 node figma_connector.js`
+- Boolean operations (union/subtract) may take longer — timeout is automatically handled and logged
 
 ## Files
 
@@ -142,14 +174,33 @@ skills/craw-figma/
 ├── SKILL.md
 ├── scripts/
 │   ├── figma_client.mjs          — Figma REST API client (read)
-│   ├── figma_connector.js        — Local WebSocket server (run this)
+│   ├── figma_connector.js        — Local HTTP server (run this) — timeout 30s configurable
 │   ├── figma_send.js             — Send commands to Figma plugin
+│   ├── shape_generator.js        — General-purpose shape creation (polygons, stars, hearts, union)
+│   ├── auto_layout.js            — Auto Layout module (cards, rows, buttons, spacing)
+│   ├── heart_generator.js        — Legacy heart shape generator
+│   ├── star_generator.js         — Legacy star generator
+│   ├── design_engine.js          — Design orchestration engine
+│   ├── design_orchestrator.js    — Orchestrator with NotebookLM consultation
+│   ├── design_critic.js          — Design critique pipeline
+│   ├── craw_design_cmd.sh        — Shell wrapper for design commands
+│   ├── svg_to_figma.js           — SVG path → Figma Vector Network converter
 │   ├── style_auditor.mjs         — Design system analysis
-│   └── accessibility_checker.mjs — WCAG compliance
+│   ├── accessibility_checker.mjs — WCAG compliance
+│   └── style-dictionary/
+│       ├── config.json           — Style Dictionary configuration
+│       ├── tokens/               — DTCG tokens → SD format
+│       ├── build/variables.css   — Generated CSS custom properties
+│       └── build/figma-tokens.json — Figma-compatible tokens
 ├── plugin/
 │   ├── manifest.json             — Figma plugin manifest
-│   ├── code.ts                   — Plugin code (TypeScript)
+│   ├── code.js                   — Plugin code (ES5, production)
+│   ├── code.ts                   — Plugin code (TypeScript source)
 │   └── ui.html                   — Plugin panel UI
+├── design-tokens/
+│   ├── design-tokens.json        — Core tokens (DTCG format)
+│   ├── projects/drs-lab.json     — DR's Lab project tokens
+│   └── load-tokens.js            — Token loader utility
 └── references/
     ├── figma-api-reference.md    — REST API docs
     └── design-patterns.md        — UI patterns & best practices

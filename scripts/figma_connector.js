@@ -38,11 +38,13 @@ var server = http.createServer(function(req, res) {
       pendingQueue.push(cmd);
 
       var id = cmd.id || Date.now().toString(36);
+      var CMD_TIMEOUT = parseInt(process.env.FIGMA_CMD_TIMEOUT, 10) || 30000;
       var timeout = setTimeout(function() {
+        console.log('[figma-connector] TIMEOUT (' + CMD_TIMEOUT + 'ms) — command: ' + id + ' (' + (cmd.command || 'unknown') + ')');
         delete resultStore[id];
         res.writeHead(200, { "Content-Type": "application/json" });
         res.end(JSON.stringify({ id: id, status: "timeout", data: null }));
-      }, 15000);
+      }, CMD_TIMEOUT);
       resultStore[id] = { resolve: function(result) {
         clearTimeout(timeout);
         res.writeHead(200, { "Content-Type": "application/json" });

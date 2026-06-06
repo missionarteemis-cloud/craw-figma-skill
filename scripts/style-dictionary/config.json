@@ -1,0 +1,21 @@
+{
+  "source": ["tokens/**/*.json"],
+  "platforms": {
+    "css": {
+      "transforms": ["name/kebab", "color/hex", "size/pxToRem"],
+      "buildPath": "build/",
+      "files": [{
+        "destination": "variables.css",
+        "format": "css/variables"
+      }]
+    },
+    "figma": {
+      "transforms": ["name/snake", "color/hex"],
+      "buildPath": "build/",
+      "files": [{
+        "destination": "figma-tokens.json",
+        "format": "json/nested"
+      }]
+    }
+  }
+}
