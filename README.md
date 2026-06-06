@@ -1,6 +1,6 @@
 # 🦀 Craw Figma Connector
 
-**AI-powered bridge between AI agents (Craw, Claude Code) and Figma.**
+**AI-powered bridge between AI agents (OpenClaw, Claude Code) and Figma.**
 Create shapes, apply auto-layout, run boolean operations, and generate vector networks — all from a prompt.
 
 ![Craw Figma Connector](plugin/icon.png)
@@ -155,6 +155,23 @@ npx style-dictionary build
 # Output: build/figma-tokens.json (Figma-compatible format)
 ```
 
+### 🔄 Visual Feedback Loop
+Auto-export and review generated designs without leaving the terminal:
+
+```bash
+# Create a design and export as PNG for analysis
+node scripts/figma_send.js '{"command":"createEllipse","payload":{"x":0,"y":0,"width":100,"height":100,"fills":[{"type":"SOLID","color":{"r":1,"g":0,"b":0}}],"name":"Test"}}'
+
+# After grouping, export as base64 PNG for visual review
+node scripts/figma_send.js '{"command":"exportNode","payload":{"id":"GROUP_ID","format":"PNG","scale":2,"asBase64":true}}'
+
+# Exported files land in /tmp/ as PNG — the AI agent can
+# analyze them with vision models and adjust coordinates
+# in the next iteration.
+```
+
+**How it works:** The plugin exports via `node.exportAsync()`, sends the base64-encoded PNG to the connector via UI proxy, and the connector saves it to disk. This enables the AI to critique its own output and iterate without human screenshots.
+
 ### 🔍 SVG to Vector
 Convert SVG paths to Figma VectorNetwork:
 
@@ -188,7 +205,7 @@ design-tokens/
 | **Boolean** | `booleanOperation` (UNION / SUBTRACT / INTERSECT / EXCLUDE), `groupSelection`, `flatten` |
 | **Components** | `createComponent`, `createInstance` |
 | **Layout** | `addAutoLayout`, updateNode with layout properties |
-| **Export** | `exportNode`, `importSvg` |
+| **Export** | `exportNode` (PNG/SVG/PDF, optional `asBase64`), `importSvg` |
 
 ### Read Commands (via figma_client.mjs)
 
@@ -325,5 +342,5 @@ craw-figma-skill/
 
 ---
 
-Built for the [OpenClaw](https://openclaw.ai) ecosystem.  
+Built for [OpenClaw](https://openclaw.ai) ecosystem.  
 License: MIT
