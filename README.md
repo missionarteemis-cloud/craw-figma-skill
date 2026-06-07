@@ -1,5 +1,12 @@
 # 🦀 Craw Figma Connector
 
+<p align="center">
+  <a href="https://github.com/missionarteemis-cloud/craw-figma-skill"><img src="https://img.shields.io/badge/GitHub-public-blue?style=flat-square&logo=github" alt="GitHub"></a>
+  <a href="https://www.figma.com/community/plugin/1645240177311500804/craw-figma-connector"><img src="https://img.shields.io/badge/Figma-plugin-%23F24E1E?style=flat-square&logo=figma" alt="Figma Plugin"></a>
+  <a href="https://clawhub.ai/"><img src="https://img.shields.io/badge/ClawHub-skill-purple?style=flat-square" alt="ClawHub"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT--0-green?style=flat-square" alt="License"></a>
+</p>
+
 **AI-powered bridge between AI agents (OpenClaw, Claude Code) and Figma.**
 Create shapes, apply auto-layout, run boolean operations, and generate vector networks — all from a prompt.
 
