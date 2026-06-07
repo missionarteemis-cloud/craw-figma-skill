@@ -3,6 +3,10 @@
 **AI-powered bridge between AI agents (OpenClaw, Claude Code) and Figma.**
 Create shapes, apply auto-layout, run boolean operations, and generate vector networks — all from a prompt.
 
+> **📦 Requires the Figma plugin.** Install from Figma Community:
+> https://www.figma.com/community/plugin/1645240177311500804/craw-figma-connector
+> Or search "Craw Figma Connector" in Figma Desktop → Plugins.
+
 ![Craw Figma Connector](plugin/icon.png)
 
 ---
